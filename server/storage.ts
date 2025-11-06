@@ -20,6 +20,54 @@ export class MemStorage implements IStorage {
   constructor() {
     this.athletes = new Map();
     this.coaches = new Map();
+    this.initializeDummyData();
+  }
+
+  private initializeDummyData() {
+    const ontarioLocations = [
+      "Toronto", "Ottawa", "Mississauga", "Brampton", "Hamilton",
+      "London", "Markham", "Vaughan", "Kitchener", "Windsor",
+      "Oakville", "Burlington", "Barrie", "Oshawa", "St. Catharines",
+      "Cambridge", "Kingston", "Guelph", "Waterloo", "Sudbury"
+    ];
+    
+    const sports = ["Soccer", "Tennis", "Golf"];
+    
+    const coaches = [
+      { name: "Michael Thompson", email: "michael.thompson@email.com", sport: "Soccer", location: "Toronto" },
+      { name: "Sarah Johnson", email: "sarah.johnson@email.com", sport: "Tennis", location: "Ottawa" },
+      { name: "David Chen", email: "david.chen@email.com", sport: "Golf", location: "Mississauga" },
+      { name: "Emily Rodriguez", email: "emily.rodriguez@email.com", sport: "Soccer", location: "Brampton" },
+      { name: "James Wilson", email: "james.wilson@email.com", sport: "Tennis", location: "Hamilton" },
+      { name: "Olivia Brown", email: "olivia.brown@email.com", sport: "Golf", location: "London" },
+      { name: "Robert Garcia", email: "robert.garcia@email.com", sport: "Soccer", location: "Markham" },
+      { name: "Jessica Martinez", email: "jessica.martinez@email.com", sport: "Tennis", location: "Vaughan" },
+      { name: "Daniel Lee", email: "daniel.lee@email.com", sport: "Golf", location: "Kitchener" },
+      { name: "Amanda Taylor", email: "amanda.taylor@email.com", sport: "Soccer", location: "Windsor" },
+      { name: "Christopher White", email: "christopher.white@email.com", sport: "Tennis", location: "Oakville" },
+      { name: "Rachel Kim", email: "rachel.kim@email.com", sport: "Golf", location: "Burlington" },
+      { name: "Matthew Anderson", email: "matthew.anderson@email.com", sport: "Soccer", location: "Barrie" },
+      { name: "Jennifer Patel", email: "jennifer.patel@email.com", sport: "Tennis", location: "Oshawa" },
+      { name: "Andrew Singh", email: "andrew.singh@email.com", sport: "Golf", location: "St. Catharines" },
+      { name: "Lauren Murphy", email: "lauren.murphy@email.com", sport: "Soccer", location: "Cambridge" },
+      { name: "Kevin O'Connor", email: "kevin.oconnor@email.com", sport: "Tennis", location: "Kingston" },
+      { name: "Nicole Davis", email: "nicole.davis@email.com", sport: "Golf", location: "Guelph" },
+      { name: "Brandon Mitchell", email: "brandon.mitchell@email.com", sport: "Soccer", location: "Waterloo" },
+      { name: "Stephanie Clark", email: "stephanie.clark@email.com", sport: "Tennis", location: "Sudbury" }
+    ];
+
+    coaches.forEach(coach => {
+      const id = randomUUID();
+      const coachData: Coach = {
+        id,
+        name: coach.name,
+        sport: coach.sport,
+        location: coach.location,
+        email: coach.email,
+        profileImage: null,
+      };
+      this.coaches.set(id, coachData);
+    });
   }
 
   async getAthlete(id: string): Promise<Athlete | undefined> {
