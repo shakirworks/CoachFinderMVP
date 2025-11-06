@@ -1,0 +1,102 @@
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import CoachCard from "@/components/CoachCard";
+import { Search, Filter } from "lucide-react";
+import type { Coach } from "@shared/schema";
+import { useState } from "react";
+
+export default function CoachesList() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+
+  const { data: coaches, isLoading } = useQuery<Coach[]>({
+    queryKey: ["/api/coaches"],
+  });
+
+  const filteredCoaches = coaches?.filter((coach) => {
+    const matchesSearch = coach.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         coach.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSport = !selectedSport || coach.sport === selectedSport;
+    return matchesSearch && matchesSport;
+  });
+
+  const sports = ["Soccer", "Tennis", "Golf"];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading coaches...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Find Your Coach</h1>
+          <p className="text-muted-foreground">
+            Browse through our network of experienced coaches
+          </p>
+        </div>
+
+        <div className="mb-6 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by name or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12"
+              data-testid="input-search"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Filter className="w-5 h-5 text-muted-foreground" />
+            <Button
+              variant={selectedSport === null ? "default" : "outline"}
+              onClick={() => setSelectedSport(null)}
+              size="sm"
+              data-testid="button-filter-all"
+            >
+              All Sports
+            </Button>
+            {sports.map((sport) => (
+              <Button
+                key={sport}
+                variant={selectedSport === sport ? "default" : "outline"}
+                onClick={() => setSelectedSport(sport)}
+                size="sm"
+                data-testid={`button-filter-${sport.toLowerCase()}`}
+              >
+                {sport}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredCoaches?.length || 0} coaches
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCoaches?.map((coach) => (
+            <CoachCard key={coach.id} coach={coach} />
+          ))}
+        </div>
+
+        {filteredCoaches?.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No coaches found matching your criteria</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
