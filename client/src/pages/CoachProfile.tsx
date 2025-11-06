@@ -111,6 +111,51 @@ export default function CoachProfile() {
                 </div>
               </div>
             </div>
+
+            {(coach.certification || coach.performanceLevel || coach.age || coach.gender || coach.bio) && (
+              <div className="border-t pt-6 space-y-4">
+                <h3 className="text-lg font-semibold">Additional Information</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {coach.certification && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Certification</h4>
+                      <p className="text-base" data-testid="text-coach-certification">{coach.certification}</p>
+                    </div>
+                  )}
+                  
+                  {coach.performanceLevel && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Performance Level</h4>
+                      <Badge variant="outline" data-testid="badge-coach-performance-level">
+                        {coach.performanceLevel}
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {coach.age && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Age</h4>
+                      <p className="text-base" data-testid="text-coach-age">{coach.age}</p>
+                    </div>
+                  )}
+                  
+                  {coach.gender && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Gender</h4>
+                      <p className="text-base" data-testid="text-coach-gender">{coach.gender}</p>
+                    </div>
+                  )}
+                </div>
+
+                {coach.bio && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">About</h4>
+                    <p className="text-base leading-relaxed" data-testid="text-coach-bio">{coach.bio}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

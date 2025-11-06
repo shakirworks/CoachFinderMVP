@@ -19,6 +19,11 @@ export const coaches = pgTable("coaches", {
   location: text("location").notNull(),
   email: text("email").notNull().unique(),
   profileImage: text("profile_image"),
+  certification: text("certification"),
+  performanceLevel: text("performance_level"),
+  age: text("age"),
+  gender: text("gender"),
+  bio: text("bio"),
 });
 
 export const messages = pgTable("messages", {

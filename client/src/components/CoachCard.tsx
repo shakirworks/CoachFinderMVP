@@ -37,9 +37,21 @@ export default function CoachCard({ coach, onMessage, onViewProfile }: CoachCard
               {coach.location}
             </span>
           </div>
-          <Badge variant="secondary" data-testid="badge-coach-sport">
-            {coach.sport}
-          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="secondary" data-testid="badge-coach-sport">
+              {coach.sport}
+            </Badge>
+            {coach.performanceLevel && (
+              <Badge variant="outline" className="text-xs" data-testid="badge-coach-performance">
+                {coach.performanceLevel}
+              </Badge>
+            )}
+          </div>
+          {coach.certification && (
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-1" data-testid="text-coach-cert-preview">
+              {coach.certification}
+            </p>
+          )}
         </div>
       </div>
       

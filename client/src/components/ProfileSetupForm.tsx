@@ -2,6 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SportsChip from "./SportsChip";
 import { Camera, MapPin, User } from "lucide-react";
@@ -16,6 +24,11 @@ interface ProfileSetupFormProps {
     location: string;
     sports: string[];
     profileImage?: string;
+    certification?: string;
+    performanceLevel?: string;
+    age?: string;
+    gender?: string;
+    bio?: string;
   }) => void;
   onBack: () => void;
 }
@@ -35,6 +48,12 @@ export default function ProfileSetupForm({
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [selectedSport, setSelectedSport] = useState<string>("");
+  
+  const [certification, setCertification] = useState("");
+  const [performanceLevel, setPerformanceLevel] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
+  const [bio, setBio] = useState("");
 
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
@@ -43,7 +62,17 @@ export default function ProfileSetupForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name && location && selectedSport) {
-      onSubmit({ name, location, sports: [selectedSport] });
+      const profile: any = { name, location, sports: [selectedSport] };
+      
+      if (role === "coach") {
+        profile.certification = certification;
+        profile.performanceLevel = performanceLevel;
+        profile.age = age;
+        profile.gender = gender;
+        profile.bio = bio;
+      }
+      
+      onSubmit(profile);
     }
   };
 
@@ -135,6 +164,86 @@ export default function ProfileSetupForm({
               </p>
             )}
           </div>
+
+          {role === "coach" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="certification">Certification</Label>
+                <Input
+                  id="certification"
+                  type="text"
+                  placeholder="e.g., USSF A License, PTR Certified"
+                  value={certification}
+                  onChange={(e) => setCertification(e.target.value)}
+                  className="h-12"
+                  data-testid="input-certification"
+                />
+                <p className="text-xs text-muted-foreground">Optional</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="performanceLevel">Performance Level</Label>
+                <Select value={performanceLevel} onValueChange={setPerformanceLevel}>
+                  <SelectTrigger className="h-12" data-testid="select-performance-level">
+                    <SelectValue placeholder="Select your level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Beginner">Beginner</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                    <SelectItem value="Advanced">Advanced</SelectItem>
+                    <SelectItem value="Professional">Professional</SelectItem>
+                    <SelectItem value="Elite">Elite</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Optional</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="text"
+                    placeholder="e.g., 35"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className="h-12"
+                    data-testid="input-age"
+                  />
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger className="h-12" data-testid="select-gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Non-binary">Non-binary</SelectItem>
+                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">About You</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Share a bit about your coaching experience and philosophy..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  className="min-h-24 resize-none"
+                  data-testid="input-bio"
+                />
+                <p className="text-xs text-muted-foreground">Optional - Tell athletes about your experience</p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="space-y-3 pt-4">

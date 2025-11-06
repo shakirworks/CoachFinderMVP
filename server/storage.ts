@@ -72,6 +72,11 @@ export class MemStorage implements IStorage {
         location: coach.location,
         email: coach.email,
         profileImage: null,
+        certification: null,
+        performanceLevel: null,
+        age: null,
+        gender: null,
+        bio: null,
       };
       this.coaches.set(id, coachData);
     });
@@ -141,6 +146,11 @@ export class MemStorage implements IStorage {
       location: insertCoach.location,
       email: insertCoach.email,
       profileImage: insertCoach.profileImage ?? null,
+      certification: insertCoach.certification ?? null,
+      performanceLevel: insertCoach.performanceLevel ?? null,
+      age: insertCoach.age ?? null,
+      gender: insertCoach.gender ?? null,
+      bio: insertCoach.bio ?? null,
     };
     this.coaches.set(id, coach);
     return coach;

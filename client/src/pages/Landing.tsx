@@ -42,7 +42,18 @@ export default function Landing() {
   });
 
   const createCoachMutation = useMutation({
-    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string }) => {
+    mutationFn: async (data: { 
+      name: string; 
+      sport: string; 
+      location: string; 
+      email: string; 
+      profileImage?: string;
+      certification?: string;
+      performanceLevel?: string;
+      age?: string;
+      gender?: string;
+      bio?: string;
+    }) => {
       const res = await apiRequest("POST", "/api/coaches", data);
       return await res.json();
     },
@@ -98,14 +109,27 @@ export default function Landing() {
     location: string;
     sports: string[];
     profileImage?: string;
+    certification?: string;
+    performanceLevel?: string;
+    age?: string;
+    gender?: string;
+    bio?: string;
   }) => {
-    const data = {
+    const data: any = {
       name: profile.name,
       sport: profile.sports[0],
       location: profile.location,
       email: email,
       profileImage: profile.profileImage,
     };
+
+    if (role === "coach") {
+      data.certification = profile.certification;
+      data.performanceLevel = profile.performanceLevel;
+      data.age = profile.age;
+      data.gender = profile.gender;
+      data.bio = profile.bio;
+    }
 
     if (role === "athlete") {
       createAthleteMutation.mutate(data);
