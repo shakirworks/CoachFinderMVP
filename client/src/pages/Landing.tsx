@@ -24,7 +24,8 @@ export default function Landing() {
       const res = await apiRequest("POST", "/api/athletes", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (athlete: Athlete) => {
+      localStorage.setItem("currentAthlete", JSON.stringify(athlete));
       toast({
         title: "Profile created!",
         description: "Welcome! Browse our coaches below.",
@@ -65,7 +66,8 @@ export default function Landing() {
       const res = await apiRequest("POST", "/api/login", { email: loginEmail });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (athlete: Athlete) => {
+      localStorage.setItem("currentAthlete", JSON.stringify(athlete));
       toast({
         title: "Welcome back!",
         description: "Redirecting you to coaches list...",

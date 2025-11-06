@@ -2,14 +2,32 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import CoachCard from "@/components/CoachCard";
-import { Search, Filter } from "lucide-react";
-import type { Coach } from "@shared/schema";
-import { useState } from "react";
+import { Search, Filter, User } from "lucide-react";
+import { useLocation } from "wouter";
+import type { Coach, Athlete } from "@shared/schema";
+import { useState, useEffect } from "react";
+import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 
 export default function CoachesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [athlete, setAthlete] = useState<Athlete | null>(null);
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const athleteData = localStorage.getItem("currentAthlete");
+    if (athleteData) {
+      setAthlete(JSON.parse(athleteData));
+    }
+  }, []);
 
   const { data: coaches, isLoading } = useQuery<Coach[]>({
     queryKey: ["/api/coaches"],
@@ -35,11 +53,46 @@ export default function CoachesList() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Find Your Coach</h1>
-          <p className="text-muted-foreground">
-            Browse through our network of experienced coaches
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Find Your Coach</h1>
+            <p className="text-muted-foreground">
+              Browse through our network of experienced coaches
+            </p>
+          </div>
+          
+          {athlete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  data-testid="button-athlete-menu"
+                >
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage
+                      src={athlete.profileImage || athleteImage}
+                      alt={athlete.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      {athlete.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => setLocation("/profile")}
+                  data-testid="menu-item-profile"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <div className="mb-6 space-y-4">
