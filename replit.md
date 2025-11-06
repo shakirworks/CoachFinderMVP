@@ -10,6 +10,15 @@ The application supports user onboarding (athletes and coaches), profile managem
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### November 6, 2025
+- **Messaging System Enhancement**: Added "Messages" option to the profile dropdown menu in CoachesList page
+  - Athletes can now quickly navigate to their messages by clicking Messages in the dropdown
+  - Navigation uses URL parameter `/profile?tab=messages` to open directly to messages tab
+  - Tab selection properly syncs with URL changes using React state and useEffect
+  - Profile dropdown now contains both "Profile" and "Messages" menu items with appropriate icons
+
 ## System Architecture
 
 ### Frontend Architecture

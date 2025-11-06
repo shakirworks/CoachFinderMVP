@@ -32,8 +32,19 @@ export default function AthleteProfile() {
   const [editedSport, setEditedSport] = useState("");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('profile');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'messages') {
+      setActiveTab('messages');
+    } else {
+      setActiveTab('profile');
+    }
+  }, [location]);
 
   const { data: messageThreads } = useQuery<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>({
     queryKey: [`/api/athletes/${athlete?.id}/messages`],
@@ -130,7 +141,7 @@ export default function AthleteProfile() {
           Back to Coaches
         </Button>
 
-        <Tabs defaultValue="profile" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
             <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>

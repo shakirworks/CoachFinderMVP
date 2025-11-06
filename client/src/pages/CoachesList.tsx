@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CoachCard from "@/components/CoachCard";
 import ChatWindow from "@/components/ChatWindow";
-import { Search, Filter, User } from "lucide-react";
+import { Search, Filter, User, MessageCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Athlete } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -94,6 +94,13 @@ export default function CoachesList() {
                 >
                   <User className="w-4 h-4 mr-2" />
                   Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setLocation("/profile?tab=messages")}
+                  data-testid="menu-item-messages"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Messages
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
