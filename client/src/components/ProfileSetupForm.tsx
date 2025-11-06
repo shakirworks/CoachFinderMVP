@@ -21,18 +21,9 @@ interface ProfileSetupFormProps {
 }
 
 const SPORTS_OPTIONS = [
-  "Running",
-  "Cycling",
-  "Swimming",
-  "Basketball",
   "Soccer",
   "Tennis",
-  "Yoga",
-  "CrossFit",
-  "Weightlifting",
-  "Boxing",
-  "Martial Arts",
-  "Volleyball",
+  "Golf",
 ];
 
 export default function ProfileSetupForm({
