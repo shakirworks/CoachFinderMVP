@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SportsChip from "./SportsChip";
 import { Camera, MapPin, User } from "lucide-react";
+import athleteImage from "@assets/stock_images/athletic_person_trai_a55dee8a.jpg";
+import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
 interface ProfileSetupFormProps {
   role: "athlete" | "coach";
@@ -70,6 +72,11 @@ export default function ProfileSetupForm({
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="flex flex-col items-center gap-3">
           <Avatar className="w-32 h-32">
+            <AvatarImage
+              src={role === "athlete" ? athleteImage : coachImage}
+              alt={`${role} profile`}
+              className="object-cover"
+            />
             <AvatarFallback className="bg-muted">
               <Camera className="w-12 h-12 text-muted-foreground" />
             </AvatarFallback>
