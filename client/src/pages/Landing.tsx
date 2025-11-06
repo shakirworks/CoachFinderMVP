@@ -7,12 +7,15 @@ import RoleSelectionCard from "@/components/RoleSelectionCard";
 import EmailSignupForm from "@/components/EmailSignupForm";
 import ProfileSetupForm from "@/components/ProfileSetupForm";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import LoginForm from "@/components/LoginForm";
+import { Button } from "@/components/ui/button";
 import type { Athlete, Coach } from "@shared/schema";
 
 export default function Landing() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<"athlete" | "coach" | null>(null);
   const [email, setEmail] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -52,6 +55,27 @@ export default function Landing() {
       toast({
         title: "Error",
         description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (loginEmail: string) => {
+      const res = await apiRequest("POST", "/api/login", { email: loginEmail });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Welcome back!",
+        description: "Redirecting you to coaches list...",
+      });
+      setLocation("/coaches");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Login failed",
+        description: error.message === "404: User not found" ? "User not found" : error.message,
         variant: "destructive",
       });
     },
@@ -97,46 +121,84 @@ export default function Landing() {
     setStep(2);
   };
 
+  const handleLoginSubmit = (loginEmail: string) => {
+    loginMutation.mutate(loginEmail);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-4xl">
-          <div className="mb-8">
-            <ProgressIndicator currentStep={step} totalSteps={3} />
-          </div>
-
-          {step === 1 && (
-            <div className="space-y-8">
-              <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                  Join as an Athlete or Coach
-                </h1>
-                <p className="text-lg text-muted-foreground">
-                  Choose how you want to get started
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <RoleSelectionCard role="athlete" onSelect={handleRoleSelect} />
-                <RoleSelectionCard role="coach" onSelect={handleRoleSelect} />
-              </div>
+          {!showLogin && step === 1 && (
+            <div className="mb-8">
+              <ProgressIndicator currentStep={step} totalSteps={3} />
             </div>
           )}
 
-          {step === 2 && role && (
-            <EmailSignupForm
-              role={role}
-              onSubmit={handleEmailSubmit}
-              onBack={handleBackFromEmail}
-            />
-          )}
+          {showLogin ? (
+            <div className="space-y-6">
+              <LoginForm onSubmit={handleLoginSubmit} isPending={loginMutation.isPending} />
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Don't have an account?
+                </p>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowLogin(false)}
+                  data-testid="button-show-signup"
+                >
+                  Create an account
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {step === 1 && (
+                <div className="space-y-8">
+                  <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                      Join as an Athlete or Coach
+                    </h1>
+                    <p className="text-lg text-muted-foreground">
+                      Choose how you want to get started
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <RoleSelectionCard role="athlete" onSelect={handleRoleSelect} />
+                    <RoleSelectionCard role="coach" onSelect={handleRoleSelect} />
+                  </div>
+                  <div className="text-center mt-8">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Already a user?
+                    </p>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setShowLogin(true)}
+                      data-testid="button-show-login"
+                    >
+                      Sign in to your account
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          {step === 3 && role && email && (
-            <ProfileSetupForm
-              role={role}
-              email={email}
-              onSubmit={handleProfileSubmit}
-              onBack={handleBackFromProfile}
-            />
+              {step === 2 && role && (
+                <EmailSignupForm
+                  role={role}
+                  onSubmit={handleEmailSubmit}
+                  onBack={handleBackFromEmail}
+                />
+              )}
+
+              {step === 3 && role && email && (
+                <ProfileSetupForm
+                  role={role}
+                  email={email}
+                  onSubmit={handleProfileSubmit}
+                  onBack={handleBackFromProfile}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

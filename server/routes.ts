@@ -46,6 +46,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Login - check if athlete email exists
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const athlete = await storage.getAthleteByEmail(email);
+      if (!athlete) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json(athlete);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
