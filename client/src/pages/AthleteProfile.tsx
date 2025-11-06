@@ -107,7 +107,7 @@ export default function AthleteProfile() {
   const sports = ["Soccer", "Tennis", "Golf"];
 
   return (
-    <div className="min-h-screen bg-background animate-fade-in">
+    <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <Button
           variant="ghost"
@@ -119,7 +119,7 @@ export default function AthleteProfile() {
           Back to Coaches
         </Button>
 
-        <Card className="animate-slide-up">
+        <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 space-y-0 pb-4">
             <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
             <div className="flex flex-wrap gap-2">
