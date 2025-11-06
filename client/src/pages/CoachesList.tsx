@@ -66,11 +66,10 @@ export default function CoachesList() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="rounded-full"
+                  className="flex flex-col items-center gap-1 h-auto py-2 px-3 hover-elevate"
                   data-testid="button-athlete-menu"
                 >
-                  <Avatar className="w-10 h-10">
+                  <Avatar className="w-10 h-10 md:w-12 md:h-12">
                     <AvatarImage
                       src={athlete.profileImage || athleteImage}
                       alt={athlete.name}
@@ -80,6 +79,9 @@ export default function CoachesList() {
                       {athlete.name.split(' ').map(n => n[0]).join('')}
                     </AvatarFallback>
                   </Avatar>
+                  <span className="hidden md:block text-xs font-medium text-foreground">
+                    {athlete.name.split(' ')[0]}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
