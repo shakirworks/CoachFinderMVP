@@ -107,28 +107,29 @@ export default function AthleteProfile() {
   const sports = ["Soccer", "Tennis", "Golf"];
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6">
+    <div className="min-h-screen bg-background animate-fade-in">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <Button
           variant="ghost"
           onClick={() => setLocation("/coaches")}
-          className="mb-6"
+          className="mb-4 sm:mb-6"
           data-testid="button-back-to-coaches"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Coaches
         </Button>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-            <CardTitle>My Profile</CardTitle>
-            <div className="flex gap-2">
+        <Card className="animate-slide-up">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 space-y-0 pb-4">
+            <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
+            <div className="flex flex-wrap gap-2">
               {!isEditing && (
                 <>
                   <Button
                     variant="outline"
                     onClick={() => setIsEditing(true)}
                     data-testid="button-edit-profile"
+                    className="flex-1 sm:flex-none"
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
@@ -137,6 +138,7 @@ export default function AthleteProfile() {
                     variant="outline"
                     onClick={handleLogout}
                     data-testid="button-logout"
+                    className="flex-1 sm:flex-none"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Log Out
@@ -146,19 +148,19 @@ export default function AthleteProfile() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-start gap-6">
-              <Avatar className="w-24 h-24">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+              <Avatar className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
                 <AvatarImage
                   src={athlete.profileImage || athleteImage}
                   alt={athlete.name}
                   className="object-cover"
                 />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-2xl">
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
                   {athlete.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 w-full space-y-4">
                 {isEditing ? (
                   <>
                     <div className="space-y-2">
@@ -209,11 +211,12 @@ export default function AthleteProfile() {
                       </Select>
                     </div>
 
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex flex-wrap gap-2 pt-4">
                       <Button
                         onClick={handleSave}
                         disabled={updateMutation.isPending}
                         data-testid="button-save-profile"
+                        className="flex-1 sm:flex-none"
                       >
                         {updateMutation.isPending ? "Saving..." : "Save Changes"}
                       </Button>
@@ -222,6 +225,7 @@ export default function AthleteProfile() {
                         onClick={handleCancel}
                         disabled={updateMutation.isPending}
                         data-testid="button-cancel-edit"
+                        className="flex-1 sm:flex-none"
                       >
                         Cancel
                       </Button>
@@ -229,23 +233,23 @@ export default function AthleteProfile() {
                   </>
                 ) : (
                   <>
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2" data-testid="text-athlete-name">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-xl sm:text-2xl font-bold mb-2" data-testid="text-athlete-name">
                         {athlete.name}
                       </h2>
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          <span data-testid="text-athlete-email">{athlete.email}</span>
+                        <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm sm:text-base">
+                          <Mail className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate" data-testid="text-athlete-email">{athlete.email}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
+                        <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm sm:text-base">
+                          <MapPin className="w-4 h-4 flex-shrink-0" />
                           <span data-testid="text-athlete-location">{athlete.location}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div>
+                    <div className="text-center sm:text-left">
                       <h3 className="text-sm font-medium text-muted-foreground mb-2">Sport</h3>
                       <Badge variant="secondary" data-testid="badge-athlete-sport">
                         {athlete.sport}
