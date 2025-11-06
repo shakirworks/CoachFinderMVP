@@ -34,20 +34,16 @@ export default function ProfileSetupForm({
 }: ProfileSetupFormProps) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [selectedSport, setSelectedSport] = useState<string>("");
 
   const handleSportToggle = (sport: string) => {
-    setSelectedSports((prev) =>
-      prev.includes(sport)
-        ? prev.filter((s) => s !== sport)
-        : [...prev, sport]
-    );
+    setSelectedSport(sport);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && location && selectedSports.length > 0) {
-      onSubmit({ name, location, sports: selectedSports });
+    if (name && location && selectedSport) {
+      onSubmit({ name, location, sports: [selectedSport] });
     }
   };
 
@@ -119,23 +115,23 @@ export default function ProfileSetupForm({
           </div>
 
           <div className="space-y-3">
-            <Label>Your Sports</Label>
+            <Label>Your Sport</Label>
             <p className="text-sm text-muted-foreground">
-              Select all sports you're interested in
+              Select your primary sport
             </p>
             <div className="flex flex-wrap gap-3">
               {SPORTS_OPTIONS.map((sport) => (
                 <SportsChip
                   key={sport}
                   sport={sport}
-                  selected={selectedSports.includes(sport)}
+                  selected={selectedSport === sport}
                   onToggle={handleSportToggle}
                 />
               ))}
             </div>
-            {selectedSports.length === 0 && (
+            {!selectedSport && (
               <p className="text-sm text-destructive">
-                Please select at least one sport
+                Please select a sport
               </p>
             )}
           </div>
@@ -145,7 +141,7 @@ export default function ProfileSetupForm({
           <Button
             type="submit"
             className="w-full h-12"
-            disabled={!name || !location || selectedSports.length === 0}
+            disabled={!name || !location || !selectedSport}
             data-testid="button-complete-profile"
           >
             Complete Profile

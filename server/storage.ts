@@ -1,52 +1,81 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUserProfile(id: string, profile: Partial<User>): Promise<User | undefined>;
+  getAthlete(id: string): Promise<Athlete | undefined>;
+  getAthleteByEmail(email: string): Promise<Athlete | undefined>;
+  createAthlete(athlete: InsertAthlete): Promise<Athlete>;
+  getAllAthletes(): Promise<Athlete[]>;
+  
+  getCoach(id: string): Promise<Coach | undefined>;
+  getCoachByEmail(email: string): Promise<Coach | undefined>;
+  createCoach(coach: InsertCoach): Promise<Coach>;
+  getAllCoaches(): Promise<Coach[]>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private athletes: Map<string, Athlete>;
+  private coaches: Map<string, Coach>;
 
   constructor() {
-    this.users = new Map();
+    this.athletes = new Map();
+    this.coaches = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getAthlete(id: string): Promise<Athlete | undefined> {
+    return this.athletes.get(id);
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
+  async getAthleteByEmail(email: string): Promise<Athlete | undefined> {
+    return Array.from(this.athletes.values()).find(
+      (athlete) => athlete.email === email,
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createAthlete(insertAthlete: InsertAthlete): Promise<Athlete> {
     const id = randomUUID();
-    const user: User = {
+    const athlete: Athlete = {
       id,
-      email: insertUser.email,
-      role: insertUser.role,
-      name: insertUser.name ?? null,
-      profileImage: insertUser.profileImage ?? null,
-      location: insertUser.location ?? null,
-      sports: insertUser.sports ?? null,
+      name: insertAthlete.name,
+      sport: insertAthlete.sport,
+      location: insertAthlete.location,
+      email: insertAthlete.email,
+      profileImage: insertAthlete.profileImage ?? null,
     };
-    this.users.set(id, user);
-    return user;
+    this.athletes.set(id, athlete);
+    return athlete;
   }
 
-  async updateUserProfile(id: string, profile: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
+  async getAllAthletes(): Promise<Athlete[]> {
+    return Array.from(this.athletes.values());
+  }
 
-    const updatedUser = { ...user, ...profile };
-    this.users.set(id, updatedUser);
-    return updatedUser;
+  async getCoach(id: string): Promise<Coach | undefined> {
+    return this.coaches.get(id);
+  }
+
+  async getCoachByEmail(email: string): Promise<Coach | undefined> {
+    return Array.from(this.coaches.values()).find(
+      (coach) => coach.email === email,
+    );
+  }
+
+  async createCoach(insertCoach: InsertCoach): Promise<Coach> {
+    const id = randomUUID();
+    const coach: Coach = {
+      id,
+      name: insertCoach.name,
+      sport: insertCoach.sport,
+      location: insertCoach.location,
+      email: insertCoach.email,
+      profileImage: insertCoach.profileImage ?? null,
+    };
+    this.coaches.set(id, coach);
+    return coach;
+  }
+
+  async getAllCoaches(): Promise<Coach[]> {
+    return Array.from(this.coaches.values());
   }
 }
 
