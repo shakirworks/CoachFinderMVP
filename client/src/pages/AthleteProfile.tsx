@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ChatWindow from "@/components/ChatWindow";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, ArrowLeft, LogOut, Edit } from "lucide-react";
-import type { Athlete } from "@shared/schema";
+import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle } from "lucide-react";
+import type { Athlete, Coach, Message } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
+import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
 export default function AthleteProfile() {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
@@ -26,8 +30,15 @@ export default function AthleteProfile() {
   const [editedName, setEditedName] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
   const [editedSport, setEditedSport] = useState("");
+  const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const { data: messageThreads } = useQuery<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>({
+    queryKey: [`/api/athletes/${athlete?.id}/messages`],
+    enabled: !!athlete?.id,
+  });
 
   useEffect(() => {
     const athleteData = localStorage.getItem("currentAthlete");
@@ -119,7 +130,14 @@ export default function AthleteProfile() {
           Back to Coaches
         </Button>
 
-        <Card>
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+            <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 space-y-0 pb-4">
             <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
             <div className="flex flex-wrap gap-2">
@@ -261,6 +279,74 @@ export default function AthleteProfile() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl">My Messages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!messageThreads || messageThreads.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No messages yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Start a conversation with a coach from the coaches list
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messageThreads.map(({ coach, lastMessage }) => (
+                      <Card
+                        key={coach.id}
+                        className="p-4 hover-elevate cursor-pointer transition-all"
+                        onClick={() => {
+                          setSelectedCoach(coach);
+                          setIsChatOpen(true);
+                        }}
+                        data-testid={`thread-${coach.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar className="w-12 h-12 flex-shrink-0">
+                            <AvatarImage
+                              src={coach.profileImage || coachImage}
+                              alt={coach.name}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                              {coach.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h3 className="font-semibold text-base">{coach.name}</h3>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {lastMessage.senderType === "athlete" ? "You: " : ""}{lastMessage.message}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {athlete && selectedCoach && (
+          <ChatWindow
+            open={isChatOpen}
+            onOpenChange={setIsChatOpen}
+            coach={selectedCoach}
+            athlete={athlete}
+          />
+        )}
       </div>
     </div>
   );

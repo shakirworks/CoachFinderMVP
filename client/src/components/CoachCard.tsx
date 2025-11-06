@@ -1,18 +1,21 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, MessageCircle, User } from "lucide-react";
 import type { Coach } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
 interface CoachCardProps {
   coach: Coach;
+  onMessage?: (coach: Coach) => void;
+  onViewProfile?: (coach: Coach) => void;
 }
 
-export default function CoachCard({ coach }: CoachCardProps) {
+export default function CoachCard({ coach, onMessage, onViewProfile }: CoachCardProps) {
   return (
     <Card className="p-6 hover-elevate transition-all" data-testid={`card-coach-${coach.id}`}>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 mb-4">
         <Avatar className="w-16 h-16">
           <AvatarImage
             src={coach.profileImage || coachImage}
@@ -38,6 +41,29 @@ export default function CoachCard({ coach }: CoachCardProps) {
             {coach.sport}
           </Badge>
         </div>
+      </div>
+      
+      <div className="flex gap-2">
+        <Button
+          variant="default"
+          size="sm"
+          className="flex-1"
+          onClick={() => onMessage?.(coach)}
+          data-testid={`button-message-${coach.id}`}
+        >
+          <MessageCircle className="w-4 h-4 mr-2" />
+          Message
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={() => onViewProfile?.(coach)}
+          data-testid={`button-view-profile-${coach.id}`}
+        >
+          <User className="w-4 h-4 mr-2" />
+          View Profile
+        </Button>
       </div>
     </Card>
   );

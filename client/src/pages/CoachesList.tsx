@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import CoachCard from "@/components/CoachCard";
+import ChatWindow from "@/components/ChatWindow";
 import { Search, Filter, User } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Athlete } from "@shared/schema";
@@ -20,6 +21,8 @@ export default function CoachesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [athlete, setAthlete] = useState<Athlete | null>(null);
+  const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -142,7 +145,17 @@ export default function CoachesList() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCoaches?.map((coach) => (
-            <CoachCard key={coach.id} coach={coach} />
+            <CoachCard 
+              key={coach.id} 
+              coach={coach}
+              onMessage={(coach) => {
+                setSelectedCoach(coach);
+                setIsChatOpen(true);
+              }}
+              onViewProfile={(coach) => {
+                setLocation(`/coach/${coach.id}`);
+              }}
+            />
           ))}
         </div>
 
@@ -152,6 +165,15 @@ export default function CoachesList() {
           </div>
         )}
       </div>
+
+      {athlete && selectedCoach && (
+        <ChatWindow
+          open={isChatOpen}
+          onOpenChange={setIsChatOpen}
+          coach={selectedCoach}
+          athlete={athlete}
+        />
+      )}
     </div>
   );
 }
