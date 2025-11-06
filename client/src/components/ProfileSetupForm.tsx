@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SportsChip from "./SportsChip";
 import { Camera, MapPin, User } from "lucide-react";
-import athleteImage from "@assets/stock_images/athletic_person_trai_a55dee8a.jpg";
+import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
 interface ProfileSetupFormProps {
