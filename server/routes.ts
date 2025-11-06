@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAthleteSchema, insertCoachSchema } from "@shared/schema";
+import { insertAthleteSchema, insertCoachSchema, insertMessageSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create athlete
@@ -77,6 +77,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(athlete);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single coach by ID
+  app.get("/api/coaches/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const coach = await storage.getCoach(id);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+      res.json(coach);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send message
+  app.post("/api/messages", async (req, res) => {
+    try {
+      const messageData = insertMessageSchema.parse(req.body);
+      const message = await storage.createMessage(messageData);
+      res.json(message);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get message thread between athlete and coach
+  app.get("/api/messages/:athleteId/:coachId", async (req, res) => {
+    try {
+      const { athleteId, coachId } = req.params;
+      const messages = await storage.getMessageThread(athleteId, coachId);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all message threads for an athlete
+  app.get("/api/athletes/:athleteId/messages", async (req, res) => {
+    try {
+      const { athleteId } = req.params;
+      const threads = await storage.getAthleteMessageThreads(athleteId);
+      res.json(threads);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

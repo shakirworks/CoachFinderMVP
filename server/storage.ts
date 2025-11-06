@@ -1,4 +1,4 @@
-import { type Athlete, type InsertAthlete, type Coach, type InsertCoach } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -12,15 +12,21 @@ export interface IStorage {
   getCoachByEmail(email: string): Promise<Coach | undefined>;
   createCoach(coach: InsertCoach): Promise<Coach>;
   getAllCoaches(): Promise<Coach[]>;
+
+  createMessage(message: InsertMessage): Promise<Message>;
+  getMessageThread(athleteId: string, coachId: string): Promise<Message[]>;
+  getAthleteMessageThreads(athleteId: string): Promise<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>;
 }
 
 export class MemStorage implements IStorage {
   private athletes: Map<string, Athlete>;
   private coaches: Map<string, Coach>;
+  private messages: Message[];
 
   constructor() {
     this.athletes = new Map();
     this.coaches = new Map();
+    this.messages = [];
     this.initializeDummyData();
   }
 
@@ -142,6 +148,49 @@ export class MemStorage implements IStorage {
 
   async getAllCoaches(): Promise<Coach[]> {
     return Array.from(this.coaches.values());
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const message: Message = {
+      id: randomUUID(),
+      athleteId: insertMessage.athleteId,
+      coachId: insertMessage.coachId,
+      message: insertMessage.message,
+      senderType: insertMessage.senderType,
+      createdAt: new Date(),
+    };
+    this.messages.push(message);
+    return message;
+  }
+
+  async getMessageThread(athleteId: string, coachId: string): Promise<Message[]> {
+    return this.messages
+      .filter(m => m.athleteId === athleteId && m.coachId === coachId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  async getAthleteMessageThreads(athleteId: string): Promise<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>> {
+    const athleteMessages = this.messages.filter(m => m.athleteId === athleteId);
+    const coachIdsSet = new Set(athleteMessages.map(m => m.coachId));
+    const coachIds = Array.from(coachIdsSet);
+    
+    const threads = coachIds.map(coachId => {
+      const coach = this.coaches.get(coachId);
+      if (!coach) return null;
+      
+      const threadMessages = athleteMessages.filter(m => m.coachId === coachId);
+      const lastMessage = threadMessages[threadMessages.length - 1];
+      
+      return {
+        coach,
+        lastMessage,
+        unreadCount: 0,
+      };
+    }).filter(Boolean) as Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>;
+    
+    return threads.sort((a, b) => 
+      b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
+    );
   }
 }
 
