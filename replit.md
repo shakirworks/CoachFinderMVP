@@ -13,6 +13,18 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### November 6, 2025
+- **Coach Profile Enhancements**: Added comprehensive profile fields for coaches during signup
+  - New optional fields: certification, performance level, age, gender, and bio
+  - ProfileSetupForm conditionally displays coach-specific fields only when role is "coach"
+  - Performance level dropdown options: Beginner, Intermediate, Advanced, Professional, Elite
+  - Gender dropdown options: Male, Female, Non-binary, Prefer not to say
+  - Bio textarea allows coaches to share their experience and coaching philosophy
+  - CoachCard displays certification and performance level badges when available
+  - CoachProfile page shows all additional information in a dedicated "Additional Information" section
+  - Database schema updated to store new coach fields (all optional, nullable)
+  - Backend API automatically accepts and validates new fields through Drizzle schema generation
+  - Tested end-to-end: coach signup, data persistence, and profile display all working correctly
+
 - **Messaging System Enhancement**: Added "Messages" option to the profile dropdown menu in CoachesList page
   - Athletes can now quickly navigate to their messages by clicking Messages in the dropdown
   - Navigation uses URL parameter `/profile?tab=messages` to open directly to messages tab
