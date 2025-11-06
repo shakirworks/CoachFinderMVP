@@ -25,6 +25,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update athlete
+  app.patch("/api/athletes/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const athlete = await storage.updateAthlete(id, updates);
+      if (!athlete) {
+        return res.status(404).json({ error: "Athlete not found" });
+      }
+      
+      res.json(athlete);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Create coach
   app.post("/api/coaches", async (req, res) => {
     try {

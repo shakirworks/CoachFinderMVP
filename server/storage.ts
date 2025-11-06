@@ -5,6 +5,7 @@ export interface IStorage {
   getAthlete(id: string): Promise<Athlete | undefined>;
   getAthleteByEmail(email: string): Promise<Athlete | undefined>;
   createAthlete(athlete: InsertAthlete): Promise<Athlete>;
+  updateAthlete(id: string, updates: Partial<InsertAthlete>): Promise<Athlete | undefined>;
   getAllAthletes(): Promise<Athlete[]>;
   
   getCoach(id: string): Promise<Coach | undefined>;
@@ -92,6 +93,23 @@ export class MemStorage implements IStorage {
     };
     this.athletes.set(id, athlete);
     return athlete;
+  }
+
+  async updateAthlete(id: string, updates: Partial<InsertAthlete>): Promise<Athlete | undefined> {
+    const athlete = this.athletes.get(id);
+    if (!athlete) {
+      return undefined;
+    }
+    
+    const updatedAthlete: Athlete = {
+      ...athlete,
+      ...updates,
+      id: athlete.id,
+      email: athlete.email,
+    };
+    
+    this.athletes.set(id, updatedAthlete);
+    return updatedAthlete;
   }
 
   async getAllAthletes(): Promise<Athlete[]> {
