@@ -163,7 +163,7 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
             <CardTitle className="text-lg">
               {format(selectedDate, "MMMM d, yyyy")}
             </CardTitle>
-            {isEditable && selectedDateSlots.length > 0 && (
+            {isEditable && (
               <Button
                 variant="destructive"
                 size="sm"
