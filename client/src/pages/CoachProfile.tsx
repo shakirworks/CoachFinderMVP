@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ChatWindow from "@/components/ChatWindow";
-import { MapPin, Mail, ArrowLeft, MessageCircle } from "lucide-react";
+import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
+import { MapPin, Mail, ArrowLeft, MessageCircle, DollarSign } from "lucide-react";
 import type { Coach, Athlete } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
@@ -103,11 +104,58 @@ export default function CoachProfile() {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Specialization</h3>
-                  <Badge variant="secondary" className="text-base px-4 py-1" data-testid="badge-coach-sport">
-                    {coach.sport}
-                  </Badge>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">Specialization</h3>
+                    <Badge variant="secondary" className="text-base px-4 py-1" data-testid="badge-coach-sport">
+                      {coach.sport}
+                    </Badge>
+                  </div>
+
+                  {coach.hourlyRate && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Hourly Rate</h3>
+                      <Badge variant="default" className="gap-1 text-base px-4 py-1" data-testid="badge-coach-rate">
+                        <DollarSign className="w-4 h-4" />
+                        {coach.hourlyRate}/hr
+                      </Badge>
+                    </div>
+                  )}
+
+                  {coach.yearsOfExperience && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Experience</h3>
+                      <Badge variant="outline" className="text-base px-4 py-1" data-testid="badge-coach-experience">
+                        {coach.yearsOfExperience} years
+                      </Badge>
+                    </div>
+                  )}
+
+                  {coach.coachingOptions && coach.coachingOptions.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Coaching</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {coach.coachingOptions.map((option) => (
+                          <Badge key={option} variant="outline" className="text-base px-4 py-1" data-testid={`badge-coaching-${option}`}>
+                            {option}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {coach.studentLevels && coach.studentLevels.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-2">Student Levels</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {coach.studentLevels.map((level) => (
+                          <Badge key={level} variant="outline" className="text-base px-4 py-1" data-testid={`badge-level-${level}`}>
+                            {level}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -158,6 +206,11 @@ export default function CoachProfile() {
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <h2 className="text-2xl font-bold mb-4">Availability</h2>
+          <AvailabilityCalendar coachId={coach.id} isEditable={false} />
+        </div>
       </div>
 
       {athlete && (

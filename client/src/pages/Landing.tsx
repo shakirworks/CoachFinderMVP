@@ -61,11 +61,13 @@ export default function Landing() {
       const res = await apiRequest("POST", "/api/coaches", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (coach: Coach) => {
+      localStorage.setItem("currentCoach", JSON.stringify(coach));
       toast({
         title: "Profile created!",
         description: "Your coach profile is now live.",
       });
+      setLocation("/coach-profile");
     },
     onError: (error: Error) => {
       toast({

@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import CoachesList from "@/pages/CoachesList";
 import AthleteProfile from "@/pages/AthleteProfile";
 import CoachProfile from "@/pages/CoachProfile";
+import CoachOwnProfile from "@/pages/CoachOwnProfile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/coaches" component={CoachesList} />
         <Route path="/profile" component={AthleteProfile} />
+        <Route path="/coach-profile" component={CoachOwnProfile} />
         <Route path="/coach/:id" component={CoachProfile} />
         <Route component={NotFound} />
       </Switch>
