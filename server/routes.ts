@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAthleteSchema, insertCoachSchema, insertMessageSchema } from "@shared/schema";
+import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create athlete
@@ -124,6 +124,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { athleteId } = req.params;
       const threads = await storage.getAthleteMessageThreads(athleteId);
       res.json(threads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create availability slot
+  app.post("/api/availability", async (req, res) => {
+    try {
+      const slotData = insertAvailabilitySlotSchema.parse(req.body);
+      const slot = await storage.createAvailabilitySlot(slotData);
+      res.json(slot);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get coach availability
+  app.get("/api/availability/:coachId", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const slots = await storage.getCoachAvailability(coachId);
+      res.json(slots);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete availability slot
+  app.delete("/api/availability/:slotId", async (req, res) => {
+    try {
+      const { slotId } = req.params;
+      await storage.deleteAvailabilitySlot(slotId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Clear all slots for a specific day
+  app.delete("/api/availability/:coachId/:date", async (req, res) => {
+    try {
+      const { coachId, date } = req.params;
+      await storage.clearDayAvailability(coachId, date);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
