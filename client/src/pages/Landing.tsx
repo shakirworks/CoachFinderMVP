@@ -53,6 +53,10 @@ export default function Landing() {
       age?: string;
       gender?: string;
       bio?: string;
+      hourlyRate?: string;
+      coachingOptions?: string[];
+      yearsOfExperience?: string;
+      studentLevels?: string[];
     }) => {
       const res = await apiRequest("POST", "/api/coaches", data);
       return await res.json();
@@ -114,6 +118,10 @@ export default function Landing() {
     age?: string;
     gender?: string;
     bio?: string;
+    hourlyRate?: string;
+    coachingOptions?: string[];
+    yearsOfExperience?: string;
+    studentLevels?: string[];
   }) => {
     const data: any = {
       name: profile.name,
@@ -129,6 +137,10 @@ export default function Landing() {
       data.age = profile.age;
       data.gender = profile.gender;
       data.bio = profile.bio;
+      data.hourlyRate = profile.hourlyRate;
+      data.coachingOptions = profile.coachingOptions;
+      data.yearsOfExperience = profile.yearsOfExperience;
+      data.studentLevels = profile.studentLevels;
     }
 
     if (role === "athlete") {

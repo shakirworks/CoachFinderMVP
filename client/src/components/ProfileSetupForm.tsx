@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import SportsChip from "./SportsChip";
-import { Camera, MapPin, User } from "lucide-react";
+import { Camera, MapPin, User, DollarSign } from "lucide-react";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
@@ -29,6 +30,10 @@ interface ProfileSetupFormProps {
     age?: string;
     gender?: string;
     bio?: string;
+    hourlyRate?: string;
+    coachingOptions?: string[];
+    yearsOfExperience?: string;
+    studentLevels?: string[];
   }) => void;
   onBack: () => void;
 }
@@ -54,9 +59,29 @@ export default function ProfileSetupForm({
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [bio, setBio] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [coachingOptions, setCoachingOptions] = useState<string[]>([]);
+  const [yearsOfExperience, setYearsOfExperience] = useState("");
+  const [studentLevels, setStudentLevels] = useState<string[]>([]);
 
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
+  };
+
+  const handleCoachingOptionToggle = (option: string) => {
+    setCoachingOptions(prev =>
+      prev.includes(option)
+        ? prev.filter(o => o !== option)
+        : [...prev, option]
+    );
+  };
+
+  const handleStudentLevelToggle = (level: string) => {
+    setStudentLevels(prev =>
+      prev.includes(level)
+        ? prev.filter(l => l !== level)
+        : [...prev, level]
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -70,6 +95,10 @@ export default function ProfileSetupForm({
         profile.age = age;
         profile.gender = gender;
         profile.bio = bio;
+        profile.hourlyRate = hourlyRate;
+        profile.coachingOptions = coachingOptions.length > 0 ? coachingOptions : undefined;
+        profile.yearsOfExperience = yearsOfExperience;
+        profile.studentLevels = studentLevels.length > 0 ? studentLevels : undefined;
       }
       
       onSubmit(profile);
@@ -241,6 +270,87 @@ export default function ProfileSetupForm({
                   data-testid="input-bio"
                 />
                 <p className="text-xs text-muted-foreground">Optional - Tell athletes about your experience</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="hourlyRate"
+                      type="number"
+                      placeholder="e.g., 75"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                      className="pl-10 h-12"
+                      data-testid="input-hourly-rate"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                  <Input
+                    id="yearsOfExperience"
+                    type="number"
+                    placeholder="e.g., 5"
+                    value={yearsOfExperience}
+                    onChange={(e) => setYearsOfExperience(e.target.value)}
+                    className="h-12"
+                    data-testid="input-years-of-experience"
+                  />
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Coaching Options</Label>
+                <p className="text-sm text-muted-foreground">Who do you coach?</p>
+                <div className="space-y-3">
+                  {["Adults", "Kids", "Groups"].map((option) => (
+                    <div key={option} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`coaching-${option}`}
+                        checked={coachingOptions.includes(option)}
+                        onCheckedChange={() => handleCoachingOptionToggle(option)}
+                        data-testid={`checkbox-coaching-${option.toLowerCase()}`}
+                      />
+                      <label
+                        htmlFor={`coaching-${option}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {option}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Optional - Select one or more</p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Student Levels</Label>
+                <p className="text-sm text-muted-foreground">What levels do you teach?</p>
+                <div className="space-y-3">
+                  {["Beginner", "Intermediate", "Advanced"].map((level) => (
+                    <div key={level} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`level-${level}`}
+                        checked={studentLevels.includes(level)}
+                        onCheckedChange={() => handleStudentLevelToggle(level)}
+                        data-testid={`checkbox-level-${level.toLowerCase()}`}
+                      />
+                      <label
+                        htmlFor={`level-${level}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {level}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Optional - Select one or more</p>
               </div>
             </>
           )}
