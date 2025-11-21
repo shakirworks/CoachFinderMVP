@@ -1,8 +1,8 @@
-# CoachConnect - Premium Athletic Coaching Platform
+# CoachFinders - Premium Athletic Coaching Platform
 
 ## Overview
 
-CoachConnect is a web application that connects athletes with coaches across various sports. The platform features a premium, minimalist design inspired by Lululemon and Apple Fitness+, with a focus on creating meaningful connections between athletes seeking coaching and experienced coaches offering their expertise.
+CoachFinders is a web application that connects athletes with coaches across various sports. The platform features a premium, minimalist design inspired by Lululemon and Apple Fitness+, with a focus on creating meaningful connections between athletes seeking coaching and experienced coaches offering their expertise.
 
 The application supports user onboarding (athletes and coaches), profile management, coach discovery with filtering, and real-time messaging capabilities. Athletes can browse coaches by sport and location, view detailed profiles, and initiate conversations directly through the platform.
 

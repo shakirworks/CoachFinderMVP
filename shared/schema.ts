@@ -24,6 +24,10 @@ export const coaches = pgTable("coaches", {
   age: text("age"),
   gender: text("gender"),
   bio: text("bio"),
+  hourlyRate: text("hourly_rate"),
+  coachingOptions: text("coaching_options").array(),
+  yearsOfExperience: text("years_of_experience"),
+  studentLevels: text("student_levels").array(),
 });
 
 export const messages = pgTable("messages", {
