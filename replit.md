@@ -12,6 +12,42 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 21, 2025
+- **App Rebranding**: Changed application name from "CoachConnect" to "CoachFinders"
+  - Updated HTML title and meta tags
+  - Updated project documentation
+
+- **Database Migration**: Migrated from in-memory storage to PostgreSQL for permanent data persistence
+  - Implemented PostgresStorage class using Drizzle ORM
+  - All CRUD operations now persist to PostgreSQL database
+  - Automatic dummy data seeding (20 coaches) on first initialization
+  - Data persists across server restarts
+
+- **Enhanced Coach Profile Fields**: Added critical business information for coaches
+  - **Hourly Rate**: Coaches can specify their pricing (displayed prominently with $ icon)
+  - **Coaching Options** (multi-select): Adults, Kids, Groups
+  - **Years of Experience**: Number input for coaching experience
+  - **Student Levels** (multi-select): Beginner, Intermediate, Advanced
+  - All fields are optional and properly validated
+
+- **Improved Coach Card Display**: Athletes can now see key information at a glance
+  - Hourly rate displayed as prominent badge (e.g., "$100/hr")
+  - Coaching options shown with labeled badges (e.g., "Coaching: Adults, Groups")
+  - Student levels shown with labeled badges (e.g., "Levels: Intermediate, Advanced")
+  - Clean, organized layout following Lululemon-inspired design aesthetic
+
+- **Database Schema Updates**:
+  - Added `hourly_rate` (text) field to coaches table
+  - Added `coaching_options` (text array) field to coaches table
+  - Added `years_of_experience` (text) field to coaches table
+  - Added `student_levels` (text array) field to coaches table
+
+- **Tested End-to-End**: Complete coach signup and athlete browsing flow verified
+  - Coach can sign up with all new fields
+  - Data persists to PostgreSQL
+  - Athletes see all new information on coach cards
+  - 21 coaches in database with varied field combinations
+
 ### November 6, 2025
 - **Coach Profile Enhancements**: Added comprehensive profile fields for coaches during signup
   - New optional fields: certification, performance level, age, gender, and bio
