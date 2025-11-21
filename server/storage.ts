@@ -368,6 +368,13 @@ export class PostgresStorage implements IStorage {
     await db
       .delete(availabilitySlots)
       .where(and(eq(availabilitySlots.coachId, coachId), eq(availabilitySlots.date, date)));
+    
+    await db.insert(availabilitySlots).values({
+      coachId,
+      date,
+      startTime: "UNAVAILABLE",
+      endTime: "UNAVAILABLE",
+    });
   }
 }
 

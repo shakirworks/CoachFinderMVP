@@ -80,17 +80,38 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     },
   });
 
+  const isSlotUnavailable = (slot: AvailabilitySlot) => {
+    return slot.startTime === "UNAVAILABLE" && slot.endTime === "UNAVAILABLE";
+  };
+
   const getDateSlots = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     return slots.filter((slot) => slot.date === dateStr);
   };
 
+  const isDateUnavailable = (date: Date) => {
+    const dateSlots = getDateSlots(date);
+    return dateSlots.some(slot => isSlotUnavailable(slot));
+  };
+
+  const getAvailableSlots = (date: Date) => {
+    const dateSlots = getDateSlots(date);
+    return dateSlots.filter(slot => !isSlotUnavailable(slot));
+  };
+
   const getDatesWithAvailability = () => {
-    const datesSet = new Set(slots.map((slot) => slot.date));
+    const availableSlots = slots.filter(slot => !isSlotUnavailable(slot));
+    const datesSet = new Set(availableSlots.map((slot) => slot.date));
     return Array.from(datesSet).map((dateStr) => parseISO(dateStr));
   };
 
-  const handleAddSlot = () => {
+  const getDatesUnavailable = () => {
+    const unavailableSlots = slots.filter(slot => isSlotUnavailable(slot));
+    const datesSet = new Set(unavailableSlots.map((slot) => slot.date));
+    return Array.from(datesSet).map((dateStr) => parseISO(dateStr));
+  };
+
+  const handleAddSlot = async () => {
     if (!selectedDate || !startTime || !endTime) {
       toast({
         title: "Error",
@@ -101,6 +122,15 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     }
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    if (selectedDateUnavailable) {
+      const dateSlots = getDateSlots(selectedDate);
+      const unavailableSlot = dateSlots.find(slot => isSlotUnavailable(slot));
+      if (unavailableSlot) {
+        await deleteSlotMutation.mutateAsync(unavailableSlot.id);
+      }
+    }
+    
     createSlotMutation.mutate({
       coachId,
       date: dateStr,
@@ -127,8 +157,10 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
   };
 
   const timeOptions = generateTimeOptions();
-  const selectedDateSlots = selectedDate ? getDateSlots(selectedDate) : [];
+  const selectedDateSlots = selectedDate ? getAvailableSlots(selectedDate) : [];
+  const selectedDateUnavailable = selectedDate ? isDateUnavailable(selectedDate) : false;
   const availableDates = getDatesWithAvailability();
+  const unavailableDates = getDatesUnavailable();
 
   return (
     <div className="space-y-4">
@@ -144,12 +176,19 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
             className="rounded-md border"
             modifiers={{
               available: availableDates,
+              unavailable: unavailableDates,
             }}
             modifiersStyles={{
               available: {
                 backgroundColor: "hsl(var(--primary) / 0.1)",
                 color: "hsl(var(--primary))",
                 fontWeight: "bold",
+              },
+              unavailable: {
+                backgroundColor: "hsl(var(--destructive) / 0.1)",
+                color: "hsl(var(--destructive))",
+                fontWeight: "bold",
+                textDecoration: "line-through",
               },
             }}
             data-testid="calendar-availability"
@@ -163,7 +202,7 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
             <CardTitle className="text-lg">
               {format(selectedDate, "MMMM d, yyyy")}
             </CardTitle>
-            {isEditable && (
+            {isEditable && !selectedDateUnavailable && (
               <Button
                 variant="destructive"
                 size="sm"
@@ -177,7 +216,20 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
             )}
           </CardHeader>
           <CardContent className="space-y-4">
-            {selectedDateSlots.length === 0 ? (
+            {selectedDateUnavailable && !isEditable ? (
+              <Badge variant="destructive" data-testid="badge-day-unavailable">
+                Day Unavailable
+              </Badge>
+            ) : selectedDateUnavailable && isEditable ? (
+              <div className="space-y-2">
+                <Badge variant="destructive" data-testid="badge-day-unavailable">
+                  Day Unavailable
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  This day is marked as unavailable. Remove the unavailable marker by adding time slots.
+                </p>
+              </div>
+            ) : selectedDateSlots.length === 0 ? (
               <p className="text-sm text-muted-foreground" data-testid="text-no-slots">
                 No availability for this day
               </p>
