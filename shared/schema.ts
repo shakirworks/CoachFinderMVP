@@ -39,6 +39,15 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+export const availabilitySlots = pgTable("availability_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coachId: varchar("coach_id").notNull().references(() => coaches.id),
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 export const insertAthleteSchema = createInsertSchema(athletes).omit({
   id: true,
 });
@@ -54,9 +63,16 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   senderType: z.enum(["athlete", "coach"]),
 });
 
+export const insertAvailabilitySlotSchema = createInsertSchema(availabilitySlots).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertAthlete = z.infer<typeof insertAthleteSchema>;
 export type Athlete = typeof athletes.$inferSelect;
 export type InsertCoach = z.infer<typeof insertCoachSchema>;
 export type Coach = typeof coaches.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+export type InsertAvailabilitySlot = z.infer<typeof insertAvailabilitySlotSchema>;
+export type AvailabilitySlot = typeof availabilitySlots.$inferSelect;

@@ -1,4 +1,4 @@
-import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, athletes, coaches, messages } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, athletes, coaches, messages, availabilitySlots } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -18,6 +18,11 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   getMessageThread(athleteId: string, coachId: string): Promise<Message[]>;
   getAthleteMessageThreads(athleteId: string): Promise<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>;
+
+  createAvailabilitySlot(slot: InsertAvailabilitySlot): Promise<AvailabilitySlot>;
+  getCoachAvailability(coachId: string): Promise<AvailabilitySlot[]>;
+  deleteAvailabilitySlot(slotId: string): Promise<void>;
+  clearDayAvailability(coachId: string, date: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -234,6 +239,22 @@ export class MemStorage implements IStorage {
       b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
     );
   }
+
+  async createAvailabilitySlot(slot: InsertAvailabilitySlot): Promise<AvailabilitySlot> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getCoachAvailability(coachId: string): Promise<AvailabilitySlot[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async deleteAvailabilitySlot(slotId: string): Promise<void> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async clearDayAvailability(coachId: string, date: string): Promise<void> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
 }
 
 export class PostgresStorage implements IStorage {
@@ -324,6 +345,29 @@ export class PostgresStorage implements IStorage {
     );
 
     return threads.filter(Boolean) as Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>;
+  }
+
+  async createAvailabilitySlot(insertSlot: InsertAvailabilitySlot): Promise<AvailabilitySlot> {
+    const result = await db.insert(availabilitySlots).values(insertSlot).returning();
+    return result[0];
+  }
+
+  async getCoachAvailability(coachId: string): Promise<AvailabilitySlot[]> {
+    return await db
+      .select()
+      .from(availabilitySlots)
+      .where(eq(availabilitySlots.coachId, coachId))
+      .orderBy(availabilitySlots.date, availabilitySlots.startTime);
+  }
+
+  async deleteAvailabilitySlot(slotId: string): Promise<void> {
+    await db.delete(availabilitySlots).where(eq(availabilitySlots.id, slotId));
+  }
+
+  async clearDayAvailability(coachId: string, date: string): Promise<void> {
+    await db
+      .delete(availabilitySlots)
+      .where(and(eq(availabilitySlots.coachId, coachId), eq(availabilitySlots.date, date)));
   }
 }
 
