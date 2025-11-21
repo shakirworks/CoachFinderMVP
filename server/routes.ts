@@ -46,6 +46,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/coaches", async (req, res) => {
     try {
       const coachData = insertCoachSchema.parse(req.body);
+      
+      // Check if coach with this email already exists
+      const existingCoach = await storage.getCoachByEmail(coachData.email);
+      if (existingCoach) {
+        return res.status(409).json({ 
+          error: "A coach account with this email already exists. Please use a different email or log in to your existing account." 
+        });
+      }
+      
       const coach = await storage.createCoach(coachData);
       res.json(coach);
     } catch (error: any) {

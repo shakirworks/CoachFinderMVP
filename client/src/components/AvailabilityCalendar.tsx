@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { AvailabilitySlot } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import Picker from "react-mobile-picker";
 
 interface AvailabilityCalendarProps {
   coachId: string;
@@ -20,8 +20,8 @@ interface AvailabilityCalendarProps {
 export function AvailabilityCalendar({ coachId, isEditable = false }: AvailabilityCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddingSlot, setIsAddingSlot] = useState(false);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState({ hour: "06", minute: "00" });
+  const [endTime, setEndTime] = useState({ hour: "07", minute: "00" });
   const { toast } = useToast();
 
   const { data: slots = [], isLoading } = useQuery<AvailabilitySlot[]>({
@@ -36,8 +36,8 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/availability", coachId] });
       setIsAddingSlot(false);
-      setStartTime("");
-      setEndTime("");
+      setStartTime({ hour: "06", minute: "00" });
+      setEndTime({ hour: "07", minute: "00" });
       toast({
         title: "Success",
         description: "Time slot added successfully",
@@ -112,16 +112,18 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
   };
 
   const handleAddSlot = async () => {
-    if (!selectedDate || !startTime || !endTime) {
+    if (!selectedDate) {
       toast({
         title: "Error",
-        description: "Please select a date and time range",
+        description: "Please select a date",
         variant: "destructive",
       });
       return;
     }
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const startTimeStr = `${startTime.hour}:${startTime.minute}`;
+    const endTimeStr = `${endTime.hour}:${endTime.minute}`;
     
     if (selectedDateUnavailable) {
       const dateSlots = getDateSlots(selectedDate);
@@ -134,8 +136,8 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     createSlotMutation.mutate({
       coachId,
       date: dateStr,
-      startTime,
-      endTime,
+      startTime: startTimeStr,
+      endTime: endTimeStr,
     });
   };
 
@@ -145,18 +147,20 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     clearDayMutation.mutate(dateStr);
   };
 
-  const generateTimeOptions = () => {
-    const times: string[] = [];
+  const generateHours = () => {
+    const hours: string[] = [];
     for (let hour = 6; hour <= 22; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-        times.push(timeStr);
-      }
+      hours.push(hour.toString().padStart(2, "0"));
     }
-    return times;
+    return hours;
   };
 
-  const timeOptions = generateTimeOptions();
+  const generateMinutes = () => {
+    return ["00", "15", "30", "45"];
+  };
+
+  const hours = generateHours();
+  const minutes = generateMinutes();
   const selectedDateSlots = selectedDate ? getAvailableSlots(selectedDate) : [];
   const selectedDateUnavailable = selectedDate ? isDateUnavailable(selectedDate) : false;
   const availableDates = getDatesWithAvailability();
@@ -274,42 +278,64 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
                   </Button>
                 ) : (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium mb-2 block">Start Time</label>
-                        <Select value={startTime} onValueChange={setStartTime}>
-                          <SelectTrigger data-testid="select-start-time">
-                            <SelectValue placeholder="Start" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {timeOptions.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="border rounded-md bg-card" data-testid="picker-start-time">
+                          <Picker
+                            value={startTime}
+                            onChange={setStartTime}
+                            wheelMode="natural"
+                            height={150}
+                          >
+                            <Picker.Column name="hour">
+                              {hours.map((hour) => (
+                                <Picker.Item key={hour} value={hour}>
+                                  {hour}
+                                </Picker.Item>
+                              ))}
+                            </Picker.Column>
+                            <Picker.Column name="minute">
+                              {minutes.map((minute) => (
+                                <Picker.Item key={minute} value={minute}>
+                                  {minute}
+                                </Picker.Item>
+                              ))}
+                            </Picker.Column>
+                          </Picker>
+                        </div>
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-2 block">End Time</label>
-                        <Select value={endTime} onValueChange={setEndTime}>
-                          <SelectTrigger data-testid="select-end-time">
-                            <SelectValue placeholder="End" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {timeOptions.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {time}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="border rounded-md bg-card" data-testid="picker-end-time">
+                          <Picker
+                            value={endTime}
+                            onChange={setEndTime}
+                            wheelMode="natural"
+                            height={150}
+                          >
+                            <Picker.Column name="hour">
+                              {hours.map((hour) => (
+                                <Picker.Item key={hour} value={hour}>
+                                  {hour}
+                                </Picker.Item>
+                              ))}
+                            </Picker.Column>
+                            <Picker.Column name="minute">
+                              {minutes.map((minute) => (
+                                <Picker.Item key={minute} value={minute}>
+                                  {minute}
+                                </Picker.Item>
+                              ))}
+                            </Picker.Column>
+                          </Picker>
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Button
                         onClick={handleAddSlot}
-                        disabled={createSlotMutation.isPending || !startTime || !endTime}
+                        disabled={createSlotMutation.isPending}
                         className="flex-1"
                         data-testid="button-save-slot"
                       >
@@ -319,8 +345,8 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
                         variant="outline"
                         onClick={() => {
                           setIsAddingSlot(false);
-                          setStartTime("");
-                          setEndTime("");
+                          setStartTime({ hour: "06", minute: "00" });
+                          setEndTime({ hour: "07", minute: "00" });
                         }}
                         data-testid="button-cancel-slot"
                       >
