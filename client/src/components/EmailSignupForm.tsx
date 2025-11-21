@@ -9,15 +9,22 @@ interface EmailSignupFormProps {
   role: "athlete" | "coach";
   onSubmit: (email: string) => void;
   onBack: () => void;
+  onLogin: (email: string) => void;
+  isLoginPending: boolean;
 }
 
-export default function EmailSignupForm({ role, onSubmit, onBack }: EmailSignupFormProps) {
+export default function EmailSignupForm({ role, onSubmit, onBack, onLogin, isLoginPending }: EmailSignupFormProps) {
   const [email, setEmail] = useState("");
+  const [isSignIn, setIsSignIn] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email && email.includes("@")) {
-      onSubmit(email);
+      if (isSignIn) {
+        onLogin(email);
+      } else {
+        onSubmit(email);
+      }
     }
   };
 
@@ -27,9 +34,11 @@ export default function EmailSignupForm({ role, onSubmit, onBack }: EmailSignupF
         <Badge className="mb-4 capitalize" data-testid={`badge-role-${role}`}>
           {role}
         </Badge>
-        <h2 className="text-3xl font-bold mb-2">Create Your Account</h2>
+        <h2 className="text-3xl font-bold mb-2">
+          {isSignIn ? "Sign In" : "Create Your Account"}
+        </h2>
         <p className="text-muted-foreground">
-          Enter your email to get started
+          {isSignIn ? "Enter your email to sign in" : "Enter your email to get started"}
         </p>
       </div>
 
@@ -55,9 +64,10 @@ export default function EmailSignupForm({ role, onSubmit, onBack }: EmailSignupF
           <Button
             type="submit"
             className="w-full h-12"
-            data-testid="button-continue"
+            disabled={isSignIn && isLoginPending}
+            data-testid={isSignIn ? "button-signin" : "button-continue"}
           >
-            Continue
+            {isSignIn ? (isLoginPending ? "Signing in..." : "Sign In") : "Continue"}
           </Button>
           <Button
             type="button"
@@ -67,6 +77,20 @@ export default function EmailSignupForm({ role, onSubmit, onBack }: EmailSignupF
             data-testid="button-back"
           >
             Back
+          </Button>
+        </div>
+
+        <div className="text-center pt-4 border-t">
+          <p className="text-sm text-muted-foreground mb-2">
+            {isSignIn ? "Don't have an account?" : "Already have an account?"}
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setIsSignIn(!isSignIn)}
+            data-testid={isSignIn ? "button-show-signup" : "button-show-signin"}
+          >
+            {isSignIn ? "Create an account" : "Sign in"}
           </Button>
         </div>
       </form>

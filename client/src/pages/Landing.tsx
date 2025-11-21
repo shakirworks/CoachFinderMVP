@@ -7,15 +7,12 @@ import RoleSelectionCard from "@/components/RoleSelectionCard";
 import EmailSignupForm from "@/components/EmailSignupForm";
 import ProfileSetupForm from "@/components/ProfileSetupForm";
 import ProgressIndicator from "@/components/ProgressIndicator";
-import LoginForm from "@/components/LoginForm";
-import { Button } from "@/components/ui/button";
 import type { Athlete, Coach } from "@shared/schema";
 
 export default function Landing() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<"athlete" | "coach" | null>(null);
   const [email, setEmail] = useState("");
-  const [showLogin, setShowLogin] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -100,6 +97,28 @@ export default function Landing() {
     },
   });
 
+  const coachLoginMutation = useMutation({
+    mutationFn: async (loginEmail: string) => {
+      const res = await apiRequest("POST", "/api/login/coach", { email: loginEmail });
+      return await res.json();
+    },
+    onSuccess: (coach: Coach) => {
+      localStorage.setItem("currentCoach", JSON.stringify(coach));
+      toast({
+        title: "Welcome back!",
+        description: "Redirecting you to your profile...",
+      });
+      setLocation("/coach-profile");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Login failed",
+        description: error.message === "404: Coach not found" ? "Coach not found" : error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRoleSelect = (selectedRole: "athlete" | "coach") => {
     setRole(selectedRole);
     setStep(2);
@@ -161,84 +180,56 @@ export default function Landing() {
     setStep(2);
   };
 
-  const handleLoginSubmit = (loginEmail: string) => {
-    loginMutation.mutate(loginEmail);
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-4xl">
-          {!showLogin && step === 1 && (
+          {step === 1 && (
             <div className="mb-8">
               <ProgressIndicator currentStep={step} totalSteps={3} />
             </div>
           )}
 
-          {showLogin ? (
-            <div className="space-y-6">
-              <LoginForm onSubmit={handleLoginSubmit} isPending={loginMutation.isPending} />
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Don't have an account?
+          {step === 1 && (
+            <div className="space-y-8">
+              <div className="text-center mb-12">
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                  Join as an Athlete or Coach
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                  Choose how you want to get started
                 </p>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setShowLogin(false)}
-                  data-testid="button-show-signup"
-                >
-                  Create an account
-                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <RoleSelectionCard role="athlete" onSelect={handleRoleSelect} />
+                <RoleSelectionCard role="coach" onSelect={handleRoleSelect} />
               </div>
             </div>
-          ) : (
-            <>
-              {step === 1 && (
-                <div className="space-y-8">
-                  <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                      Join as an Athlete or Coach
-                    </h1>
-                    <p className="text-lg text-muted-foreground">
-                      Choose how you want to get started
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <RoleSelectionCard role="athlete" onSelect={handleRoleSelect} />
-                    <RoleSelectionCard role="coach" onSelect={handleRoleSelect} />
-                  </div>
-                  <div className="text-center mt-8">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Already a user?
-                    </p>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => setShowLogin(true)}
-                      data-testid="button-show-login"
-                    >
-                      Sign in to your account
-                    </Button>
-                  </div>
-                </div>
-              )}
+          )}
 
-              {step === 2 && role && (
-                <EmailSignupForm
-                  role={role}
-                  onSubmit={handleEmailSubmit}
-                  onBack={handleBackFromEmail}
-                />
-              )}
+          {step === 2 && role && (
+            <EmailSignupForm
+              role={role}
+              onSubmit={handleEmailSubmit}
+              onBack={handleBackFromEmail}
+              onLogin={(email) => {
+                if (role === "athlete") {
+                  loginMutation.mutate(email);
+                } else {
+                  coachLoginMutation.mutate(email);
+                }
+              }}
+              isLoginPending={role === "athlete" ? loginMutation.isPending : coachLoginMutation.isPending}
+            />
+          )}
 
-              {step === 3 && role && email && (
-                <ProfileSetupForm
-                  role={role}
-                  email={email}
-                  onSubmit={handleProfileSubmit}
-                  onBack={handleBackFromProfile}
-                />
-              )}
-            </>
+          {step === 3 && role && email && (
+            <ProfileSetupForm
+              role={role}
+              email={email}
+              onSubmit={handleProfileSubmit}
+              onBack={handleBackFromProfile}
+            />
           )}
         </div>
       </div>

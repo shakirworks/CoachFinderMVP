@@ -91,6 +91,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Coach login - check if coach email exists
+  app.post("/api/login/coach", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const coach = await storage.getCoachByEmail(email);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+      
+      res.json(coach);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get single coach by ID
   app.get("/api/coaches/:id", async (req, res) => {
     try {
