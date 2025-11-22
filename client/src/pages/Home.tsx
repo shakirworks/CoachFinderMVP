@@ -7,6 +7,11 @@ import coachingImage from "@assets/stock_images/professional_golf_co_ac002a71.jp
 import swingImage from "@assets/stock_images/golf_player_swing_ac_14572bfe.jpg";
 
 export default function Home() {
+  const scrollToFeatures = () => {
+    const featuresSection = document.getElementById("features");
+    featuresSection?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -50,7 +55,7 @@ export default function Home() {
             <Link href="/signup">
               <Button 
                 size="lg" 
-                className="px-8 py-6 text-lg rounded-full backdrop-blur-sm bg-white text-black hover:bg-white/90"
+                className="rounded-full backdrop-blur-sm bg-white text-black border-white"
                 data-testid="button-getstarted-hero"
               >
                 Get Started
@@ -59,7 +64,8 @@ export default function Home() {
             <Button 
               size="lg" 
               variant="outline" 
-              className="px-8 py-6 text-lg rounded-full backdrop-blur-sm bg-white/10 border-white/30 text-white hover:bg-white/20"
+              className="rounded-full backdrop-blur-sm bg-white/10 border-white/30 text-white"
+              onClick={scrollToFeatures}
               data-testid="button-learnmore"
             >
               Learn More
@@ -68,7 +74,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-20 md:py-24 bg-muted/30">
+      <section id="features" className="py-20 md:py-24 bg-muted/30">
         <div className="container px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4">
@@ -217,7 +223,7 @@ export default function Home() {
             <Button 
               size="lg" 
               variant="secondary"
-              className="px-8 py-6 text-lg rounded-full"
+              className="rounded-full"
               data-testid="button-getstarted-footer"
             >
               Get Started Today
