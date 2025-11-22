@@ -2,9 +2,9 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Target, Calendar, MessageSquare, TrendingUp, Users, Award } from "lucide-react";
-import heroImage from "@assets/stock_images/professional_golf_co_e9fb7090.jpg";
-import coachingImage from "@assets/stock_images/professional_golf_co_ac002a71.jpg";
-import swingImage from "@assets/stock_images/golf_player_swing_ac_14572bfe.jpg";
+import heroImage from "@assets/stock_images/professional_sports__e977efaa.jpg";
+import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
+import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
 
 export default function Home() {
   const scrollToFeatures = () => {
@@ -35,7 +35,7 @@ export default function Home() {
         <div className="absolute inset-0">
           <img 
             src={heroImage} 
-            alt="Professional golf coaching" 
+            alt="Professional sports coaching" 
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
@@ -45,11 +45,11 @@ export default function Home() {
           <h1 className="text-5xl md:text-7xl font-light tracking-tight mb-6 leading-tight">
             Find Your Perfect
             <br />
-            <span className="font-medium">Golf Coach</span>
+            <span className="font-medium">Sports Coach</span>
           </h1>
           <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Connect with certified golf professionals, book personalized sessions,
-            and elevate your game to the next level.
+            Connect with certified professionals, book personalized training sessions,
+            and elevate your athletic performance to the next level.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">
@@ -81,7 +81,7 @@ export default function Home() {
               Why Choose CoachFinders
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              The premier platform connecting golfers with expert coaches
+              The premier platform connecting athletes with expert coaches
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium mb-3">Certified Coaches</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Browse profiles of experienced golf professionals with verified credentials and proven track records.
+                  Browse profiles of experienced sports professionals with verified credentials and proven track records.
                 </p>
               </CardContent>
             </Card>
@@ -131,7 +131,7 @@ export default function Home() {
             <div>
               <img 
                 src={coachingImage} 
-                alt="Golf coaching session" 
+                alt="Sports coaching session" 
                 className="w-full h-[400px] object-cover rounded-lg shadow-lg"
               />
             </div>
@@ -140,7 +140,7 @@ export default function Home() {
                 For Athletes
               </h2>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Whether you're a beginner looking to learn the fundamentals or an experienced player 
+                Whether you're a beginner looking to learn the fundamentals or an experienced athlete 
                 aiming to refine your technique, find the perfect coach to match your goals.
               </p>
               <div className="space-y-4">
@@ -202,8 +202,8 @@ export default function Home() {
             </div>
             <div className="order-1 md:order-2">
               <img 
-                src={swingImage} 
-                alt="Golf swing analysis" 
+                src={athleteImage} 
+                alt="Athletic training" 
                 className="w-full h-[400px] object-cover rounded-lg shadow-lg"
               />
             </div>
@@ -214,7 +214,7 @@ export default function Home() {
       <section className="py-20 md:py-32 bg-primary text-primary-foreground">
         <div className="container px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-light tracking-tight mb-6">
-            Ready to Elevate Your Golf Game?
+            Ready to Elevate Your Performance?
           </h2>
           <p className="text-lg md:text-xl text-primary-foreground/90 mb-10 max-w-2xl mx-auto leading-relaxed">
             Join thousands of athletes and coaches already using CoachFinders
