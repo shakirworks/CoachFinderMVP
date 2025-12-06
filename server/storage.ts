@@ -456,9 +456,11 @@ async function initializeDummyData() {
   const hourlyRates = ["50", "75", "100", "125", "150"];
   const experienceYears = ["2", "5", "8", "10", "15"];
 
+  const createdCoaches: { id: string }[] = [];
+  
   for (let i = 0; i < coachesData.length; i++) {
     const coach = coachesData[i];
-    await db.insert(coaches).values({
+    const result = await db.insert(coaches).values({
       name: coach.name,
       sport: coach.sport,
       location: coach.location,
@@ -467,10 +469,120 @@ async function initializeDummyData() {
       coachingOptions: coachingOptionsOptions[i % coachingOptionsOptions.length],
       yearsOfExperience: experienceYears[i % experienceYears.length],
       studentLevels: studentLevelsOptions[i % studentLevelsOptions.length],
-    });
+    }).returning({ id: coaches.id });
+    createdCoaches.push(result[0]);
+  }
+
+  const today = new Date();
+  const timeSlots = [
+    { startTime: "09:00", endTime: "10:00" },
+    { startTime: "10:00", endTime: "11:00" },
+    { startTime: "11:00", endTime: "12:00" },
+    { startTime: "14:00", endTime: "15:00" },
+    { startTime: "15:00", endTime: "16:00" },
+    { startTime: "16:00", endTime: "17:00" },
+  ];
+
+  for (let i = 0; i < createdCoaches.length; i++) {
+    const coachId = createdCoaches[i].id;
+    
+    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + dayOffset);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      if (dayOffset % 7 === 0 && i % 3 === 0) {
+        await db.insert(availabilitySlots).values({
+          coachId,
+          date: dateStr,
+          startTime: "UNAVAILABLE",
+          endTime: "UNAVAILABLE",
+        });
+        continue;
+      }
+      
+      const numSlots = 2 + (i % 4);
+      const startIndex = i % timeSlots.length;
+      
+      for (let j = 0; j < numSlots && j < timeSlots.length; j++) {
+        const slotIndex = (startIndex + j) % timeSlots.length;
+        const slot = timeSlots[slotIndex];
+        
+        await db.insert(availabilitySlots).values({
+          coachId,
+          date: dateStr,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        });
+      }
+    }
   }
 }
 
 initializeDummyData().catch(console.error);
+
+async function seedAvailabilityForExistingCoaches() {
+  const allCoaches = await db.select({ id: coaches.id }).from(coaches);
+  
+  if (allCoaches.length === 0) {
+    return;
+  }
+
+  const existingSlots = await db.select({ coachId: availabilitySlots.coachId }).from(availabilitySlots);
+  const coachesWithAvailability = new Set(existingSlots.map(s => s.coachId));
+  
+  const coachesWithoutAvailability = allCoaches.filter(c => !coachesWithAvailability.has(c.id));
+  
+  if (coachesWithoutAvailability.length === 0) {
+    return;
+  }
+
+  const today = new Date();
+  const timeSlots = [
+    { startTime: "09:00", endTime: "10:00" },
+    { startTime: "10:00", endTime: "11:00" },
+    { startTime: "11:00", endTime: "12:00" },
+    { startTime: "14:00", endTime: "15:00" },
+    { startTime: "15:00", endTime: "16:00" },
+    { startTime: "16:00", endTime: "17:00" },
+  ];
+
+  for (let i = 0; i < coachesWithoutAvailability.length; i++) {
+    const coachId = coachesWithoutAvailability[i].id;
+    
+    for (let dayOffset = 0; dayOffset < 14; dayOffset++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + dayOffset);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      if (dayOffset % 7 === 0 && i % 3 === 0) {
+        await db.insert(availabilitySlots).values({
+          coachId,
+          date: dateStr,
+          startTime: "UNAVAILABLE",
+          endTime: "UNAVAILABLE",
+        });
+        continue;
+      }
+      
+      const numSlots = 2 + (i % 4);
+      const startIndex = i % timeSlots.length;
+      
+      for (let j = 0; j < numSlots && j < timeSlots.length; j++) {
+        const slotIndex = (startIndex + j) % timeSlots.length;
+        const slot = timeSlots[slotIndex];
+        
+        await db.insert(availabilitySlots).values({
+          coachId,
+          date: dateStr,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        });
+      }
+    }
+  }
+}
+
+seedAvailabilityForExistingCoaches().catch(console.error);
 
 export const storage = new PostgresStorage();

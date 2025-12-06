@@ -3,6 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CoachCard from "@/components/CoachCard";
 import ChatWindow from "@/components/ChatWindow";
-import { Search, Filter, User, MessageCircle } from "lucide-react";
+import { Search, Filter, User, MessageCircle, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Coach, Athlete } from "@shared/schema";
 import { useState, useEffect } from "react";
@@ -23,6 +31,11 @@ export default function CoachesList() {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [selectedCoachingTypes, setSelectedCoachingTypes] = useState<string[]>([]);
+  const [minRate, setMinRate] = useState("");
+  const [maxRate, setMaxRate] = useState("");
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -36,11 +49,50 @@ export default function CoachesList() {
     queryKey: ["/api/coaches"],
   });
 
+  const studentLevelOptions = ["Beginner", "Intermediate", "Advanced"];
+  const coachingTypeOptions = ["Adults", "Kids", "Groups"];
+
+  const toggleLevel = (level: string) => {
+    setSelectedLevels(prev =>
+      prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
+    );
+  };
+
+  const toggleCoachingType = (type: string) => {
+    setSelectedCoachingTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedLevels([]);
+    setSelectedCoachingTypes([]);
+    setMinRate("");
+    setMaxRate("");
+    setSelectedSport(null);
+  };
+
+  const hasActiveFilters = selectedLevels.length > 0 || selectedCoachingTypes.length > 0 || minRate || maxRate || selectedSport;
+
   const filteredCoaches = coaches?.filter((coach) => {
     const matchesSearch = coach.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          coach.location.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSport = !selectedSport || coach.sport === selectedSport;
-    return matchesSearch && matchesSport;
+    
+    const matchesLevels = selectedLevels.length === 0 || 
+      (coach.studentLevels && selectedLevels.some(level => coach.studentLevels?.includes(level)));
+    
+    const matchesCoachingTypes = selectedCoachingTypes.length === 0 ||
+      (coach.coachingOptions && selectedCoachingTypes.some(type => coach.coachingOptions?.includes(type)));
+    
+    const coachRate = coach.hourlyRate ? parseFloat(coach.hourlyRate) : null;
+    const minRateNum = minRate ? parseFloat(minRate) : null;
+    const maxRateNum = maxRate ? parseFloat(maxRate) : null;
+    
+    const matchesMinRate = !minRateNum || (coachRate !== null && coachRate >= minRateNum);
+    const matchesMaxRate = !maxRateNum || (coachRate !== null && coachRate <= maxRateNum);
+    
+    return matchesSearch && matchesSport && matchesLevels && matchesCoachingTypes && matchesMinRate && matchesMaxRate;
   });
 
   const sports = ["Soccer", "Tennis", "Golf"];
@@ -120,28 +172,140 @@ export default function CoachesList() {
             />
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <Filter className="w-5 h-5 text-muted-foreground" />
-            <Button
-              variant={selectedSport === null ? "default" : "outline"}
-              onClick={() => setSelectedSport(null)}
-              size="sm"
-              data-testid="button-filter-all"
-            >
-              All Sports
-            </Button>
-            {sports.map((sport) => (
-              <Button
-                key={sport}
-                variant={selectedSport === sport ? "default" : "outline"}
-                onClick={() => setSelectedSport(sport)}
-                size="sm"
-                data-testid={`button-filter-${sport.toLowerCase()}`}
-              >
-                {sport}
-              </Button>
-            ))}
-          </div>
+          <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <div className="flex items-center gap-3">
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  data-testid="button-filter-toggle"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  {hasActiveFilters && (
+                    <Badge variant="secondary" className="ml-1">
+                      {(selectedLevels.length + selectedCoachingTypes.length + (selectedSport ? 1 : 0) + (minRate ? 1 : 0) + (maxRate ? 1 : 0))}
+                    </Badge>
+                  )}
+                  {isFilterOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="gap-1 text-muted-foreground"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="w-4 h-4" />
+                  Clear all
+                </Button>
+              )}
+            </div>
+
+            <CollapsibleContent>
+              <Card className="mt-4">
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                      <Label className="text-sm font-medium mb-3 block">Sport</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant={selectedSport === null ? "default" : "outline"}
+                          onClick={() => setSelectedSport(null)}
+                          size="sm"
+                          data-testid="button-filter-all"
+                        >
+                          All
+                        </Button>
+                        {sports.map((sport) => (
+                          <Button
+                            key={sport}
+                            variant={selectedSport === sport ? "default" : "outline"}
+                            onClick={() => setSelectedSport(sport)}
+                            size="sm"
+                            data-testid={`button-filter-${sport.toLowerCase()}`}
+                          >
+                            {sport}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-3 block">Student Levels</Label>
+                      <div className="space-y-2">
+                        {studentLevelOptions.map((level) => (
+                          <div key={level} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`level-${level}`}
+                              checked={selectedLevels.includes(level)}
+                              onCheckedChange={() => toggleLevel(level)}
+                              data-testid={`checkbox-level-${level.toLowerCase()}`}
+                            />
+                            <Label
+                              htmlFor={`level-${level}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {level}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-3 block">Coaching Types</Label>
+                      <div className="space-y-2">
+                        {coachingTypeOptions.map((type) => (
+                          <div key={type} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`type-${type}`}
+                              checked={selectedCoachingTypes.includes(type)}
+                              onCheckedChange={() => toggleCoachingType(type)}
+                              data-testid={`checkbox-type-${type.toLowerCase()}`}
+                            />
+                            <Label
+                              htmlFor={`type-${type}`}
+                              className="text-sm font-normal cursor-pointer"
+                            >
+                              {type}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-3 block">Hourly Rate ($)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          value={minRate}
+                          onChange={(e) => setMinRate(e.target.value)}
+                          className="w-24"
+                          data-testid="input-min-rate"
+                        />
+                        <span className="text-muted-foreground">to</span>
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          value={maxRate}
+                          onChange={(e) => setMaxRate(e.target.value)}
+                          className="w-24"
+                          data-testid="input-max-rate"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         <div className="mb-4">
