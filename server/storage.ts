@@ -8,13 +8,17 @@ export interface IStorage {
   getAthleteByEmail(email: string): Promise<Athlete | undefined>;
   createAthlete(athlete: InsertAthlete): Promise<Athlete>;
   updateAthlete(id: string, updates: Partial<InsertAthlete>): Promise<Athlete | undefined>;
+  deleteAthlete(id: string): Promise<void>;
   getAllAthletes(): Promise<Athlete[]>;
   
   getCoach(id: string): Promise<Coach | undefined>;
   getCoachByEmail(email: string): Promise<Coach | undefined>;
   createCoach(coach: InsertCoach): Promise<Coach>;
   updateCoach(id: string, updates: Partial<InsertCoach>): Promise<Coach | undefined>;
+  deleteCoach(id: string): Promise<void>;
   getAllCoaches(): Promise<Coach[]>;
+
+  checkEmailExists(email: string): Promise<{ exists: boolean; role: "athlete" | "coach" | null }>;
 
   createMessage(message: InsertMessage): Promise<Message>;
   getMessageThread(athleteId: string, coachId: string): Promise<Message[]>;
@@ -157,6 +161,11 @@ export class MemStorage implements IStorage {
     return updatedAthlete;
   }
 
+  async deleteAthlete(id: string): Promise<void> {
+    this.athletes.delete(id);
+    this.messages = this.messages.filter(m => m.athleteId !== id);
+  }
+
   async getAllAthletes(): Promise<Athlete[]> {
     return Array.from(this.athletes.values());
   }
@@ -211,8 +220,25 @@ export class MemStorage implements IStorage {
     return updatedCoach;
   }
 
+  async deleteCoach(id: string): Promise<void> {
+    this.coaches.delete(id);
+    this.messages = this.messages.filter(m => m.coachId !== id);
+  }
+
   async getAllCoaches(): Promise<Coach[]> {
     return Array.from(this.coaches.values());
+  }
+
+  async checkEmailExists(email: string): Promise<{ exists: boolean; role: "athlete" | "coach" | null }> {
+    const athlete = await this.getAthleteByEmail(email);
+    if (athlete) {
+      return { exists: true, role: "athlete" };
+    }
+    const coach = await this.getCoachByEmail(email);
+    if (coach) {
+      return { exists: true, role: "coach" };
+    }
+    return { exists: false, role: null };
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
@@ -300,6 +326,11 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async deleteAthlete(id: string): Promise<void> {
+    await db.delete(messages).where(eq(messages.athleteId, id));
+    await db.delete(athletes).where(eq(athletes.id, id));
+  }
+
   async getAllAthletes(): Promise<Athlete[]> {
     return await db.select().from(athletes);
   }
@@ -328,8 +359,26 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  async deleteCoach(id: string): Promise<void> {
+    await db.delete(messages).where(eq(messages.coachId, id));
+    await db.delete(availabilitySlots).where(eq(availabilitySlots.coachId, id));
+    await db.delete(coaches).where(eq(coaches.id, id));
+  }
+
   async getAllCoaches(): Promise<Coach[]> {
     return await db.select().from(coaches);
+  }
+
+  async checkEmailExists(email: string): Promise<{ exists: boolean; role: "athlete" | "coach" | null }> {
+    const athlete = await this.getAthleteByEmail(email);
+    if (athlete) {
+      return { exists: true, role: "athlete" };
+    }
+    const coach = await this.getCoachByEmail(email);
+    if (coach) {
+      return { exists: true, role: "coach" };
+    }
+    return { exists: false, role: null };
   }
 
   async createMessage(insertMessage: InsertMessage): Promise<Message> {

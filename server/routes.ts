@@ -4,6 +4,20 @@ import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Check if email exists
+  app.get("/api/users/exists", async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      const result = await storage.checkEmailExists(email);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create athlete
   app.post("/api/athletes", async (req, res) => {
     try {
@@ -39,6 +53,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(athlete);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete athlete
+  app.delete("/api/athletes/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const athlete = await storage.getAthlete(id);
+      if (!athlete) {
+        return res.status(404).json({ error: "Athlete not found" });
+      }
+      await storage.deleteAthlete(id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -138,6 +167,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(coach);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete coach
+  app.delete("/api/coaches/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const coach = await storage.getCoach(id);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+      await storage.deleteCoach(id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

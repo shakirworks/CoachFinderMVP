@@ -14,11 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatWindow from "@/components/ChatWindow";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle } from "lucide-react";
+import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2 } from "lucide-react";
 import type { Athlete, Coach, Message } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
@@ -77,6 +88,27 @@ export default function AthleteProfile() {
         title: "Profile updated!",
         description: "Your changes have been saved.",
       });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/athletes/${athlete!.id}`);
+    },
+    onSuccess: () => {
+      localStorage.removeItem("currentAthlete");
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      setLocation("/");
     },
     onError: (error: Error) => {
       toast({
@@ -258,6 +290,43 @@ export default function AthleteProfile() {
                       >
                         Cancel
                       </Button>
+                    </div>
+
+                    <div className="pt-8 border-t mt-8">
+                      <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Once you delete your account, there is no going back. Please be certain.
+                      </p>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            data-testid="button-delete-account"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Account
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete your account
+                              and remove all your data including your messages.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate()}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              data-testid="button-confirm-delete"
+                            >
+                              {deleteMutation.isPending ? "Deleting..." : "Yes, delete my account"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </>
                 ) : (
