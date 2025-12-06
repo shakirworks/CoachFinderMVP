@@ -124,6 +124,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update coach
+  app.patch("/api/coaches/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const coach = await storage.updateCoach(id, updates);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+      
+      res.json(coach);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Send message
   app.post("/api/messages", async (req, res) => {
     try {

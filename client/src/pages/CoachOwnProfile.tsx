@@ -1,14 +1,33 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import ChatWindow from "@/components/ChatWindow";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown } from "lucide-react";
 import type { Coach, Athlete, Message } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
@@ -18,34 +37,103 @@ export default function CoachOwnProfile() {
   const [coach, setCoach] = useState<Coach | null>(null);
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedLocation, setEditedLocation] = useState("");
+  const [editedSport, setEditedSport] = useState("");
+  const [editedBio, setEditedBio] = useState("");
+  const [editedHourlyRate, setEditedHourlyRate] = useState("");
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('availability');
+  const { toast } = useToast();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get('tab');
     if (tabParam === 'messages') {
       setActiveTab('messages');
-    } else if (tabParam === 'availability') {
-      setActiveTab('availability');
+    } else if (tabParam === 'edit') {
+      setActiveTab('edit');
     } else {
-      setActiveTab('profile');
+      setActiveTab('availability');
     }
   }, []);
 
   useEffect(() => {
     const coachData = localStorage.getItem("currentCoach");
     if (coachData) {
-      setCoach(JSON.parse(coachData));
+      const parsedCoach = JSON.parse(coachData);
+      setCoach(parsedCoach);
+      setEditedName(parsedCoach.name || "");
+      setEditedLocation(parsedCoach.location || "");
+      setEditedSport(parsedCoach.sport || "");
+      setEditedBio(parsedCoach.bio || "");
+      setEditedHourlyRate(parsedCoach.hourlyRate?.toString() || "");
     } else {
       setLocation("/");
     }
   }, [setLocation]);
 
+  const updateMutation = useMutation({
+    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number }) => {
+      const res = await apiRequest("PATCH", `/api/coaches/${coach!.id}`, updates);
+      return await res.json();
+    },
+    onSuccess: (updatedCoach: Coach) => {
+      setCoach(updatedCoach);
+      localStorage.setItem("currentCoach", JSON.stringify(updatedCoach));
+      setIsEditing(false);
+      setActiveTab('availability');
+      toast({
+        title: "Profile updated!",
+        description: "Your changes have been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLogout = () => {
     localStorage.removeItem("currentCoach");
     setLocation("/");
   };
+
+  const handleSave = () => {
+    if (!editedName.trim() || !editedLocation.trim() || !editedSport) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    updateMutation.mutate({
+      name: editedName.trim(),
+      location: editedLocation.trim(),
+      sport: editedSport,
+      bio: editedBio.trim() || undefined,
+      hourlyRate: editedHourlyRate ? parseInt(editedHourlyRate) : undefined,
+    });
+  };
+
+  const sports = [
+    "Basketball",
+    "Soccer",
+    "Tennis",
+    "Golf",
+    "Swimming",
+    "Running",
+    "Yoga",
+    "CrossFit",
+    "Boxing",
+    "Other"
+  ];
 
   if (!coach) {
     return (
@@ -57,132 +145,58 @@ export default function CoachOwnProfile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Coach Dashboard</h1>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Log Out
-          </Button>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between">
+          <h1 className="text-xl font-semibold">Coach Dashboard</h1>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2" data-testid="button-profile-menu">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={coach.profileImage || coachImage}
+                    alt={coach.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                    {coach.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline-block">{coach.name}</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem 
+                onClick={() => setActiveTab('edit')}
+                data-testid="menu-edit-profile"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                data-testid="menu-logout"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      </header>
 
+      <div className="max-w-5xl mx-auto p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
-            <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
             <TabsTrigger value="availability" data-testid="tab-availability">Availability</TabsTrigger>
+            <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
+            <TabsTrigger value="edit" data-testid="tab-edit">Edit Profile</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl sm:text-2xl">My Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
-                    <AvatarImage
-                      src={coach.profileImage || coachImage}
-                      alt={coach.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
-                      {coach.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 w-full space-y-4">
-                    <div className="text-center sm:text-left">
-                      <h2 className="text-xl sm:text-2xl font-bold mb-2" data-testid="text-coach-name">
-                        {coach.name}
-                      </h2>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm sm:text-base">
-                          <Mail className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate" data-testid="text-coach-email">{coach.email}</span>
-                        </div>
-                        <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm sm:text-base">
-                          <MapPin className="w-4 h-4 flex-shrink-0" />
-                          <span data-testid="text-coach-location">{coach.location}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Sport</h3>
-                        <Badge variant="secondary" data-testid="badge-coach-sport">
-                          {coach.sport}
-                        </Badge>
-                      </div>
-
-                      {coach.hourlyRate && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Hourly Rate</h3>
-                          <Badge variant="default" className="gap-1" data-testid="badge-coach-rate">
-                            <DollarSign className="w-3 h-3" />
-                            {coach.hourlyRate}/hr
-                          </Badge>
-                        </div>
-                      )}
-
-                      {coach.yearsOfExperience && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Experience</h3>
-                          <Badge variant="outline" data-testid="badge-coach-experience">
-                            {coach.yearsOfExperience} years
-                          </Badge>
-                        </div>
-                      )}
-
-                      {coach.coachingOptions && coach.coachingOptions.length > 0 && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Coaching</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {coach.coachingOptions.map((option) => (
-                              <Badge key={option} variant="outline" data-testid={`badge-coaching-${option}`}>
-                                {option}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {coach.studentLevels && coach.studentLevels.length > 0 && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Student Levels</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {coach.studentLevels.map((level) => (
-                              <Badge key={level} variant="outline" data-testid={`badge-level-${level}`}>
-                                {level}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {coach.certification && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Certification</h3>
-                          <p className="text-sm" data-testid="text-coach-certification">{coach.certification}</p>
-                        </div>
-                      )}
-
-                      {coach.bio && (
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground mb-2">Bio</h3>
-                          <p className="text-sm" data-testid="text-coach-bio">{coach.bio}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="availability">
+            <AvailabilityCalendar coachId={coach.id} isEditable={true} />
           </TabsContent>
 
           <TabsContent value="messages">
@@ -202,8 +216,114 @@ export default function CoachOwnProfile() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="availability">
-            <AvailabilityCalendar coachId={coach.id} isEditable={true} />
+          <TabsContent value="edit">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl">Edit Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 pb-6 border-b">
+                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
+                    <AvatarImage
+                      src={coach.profileImage || coachImage}
+                      alt={coach.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
+                      {coach.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-center sm:text-left">
+                    <h2 className="text-xl font-semibold">{coach.name}</h2>
+                    <p className="text-sm text-muted-foreground">{coach.email}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      placeholder="Your name"
+                      data-testid="input-edit-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location *</Label>
+                    <Input
+                      id="location"
+                      value={editedLocation}
+                      onChange={(e) => setEditedLocation(e.target.value)}
+                      placeholder="City, State"
+                      data-testid="input-edit-location"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sport">Sport *</Label>
+                    <Select value={editedSport} onValueChange={setEditedSport}>
+                      <SelectTrigger data-testid="select-edit-sport">
+                        <SelectValue placeholder="Select sport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sports.map((sport) => (
+                          <SelectItem key={sport} value={sport}>
+                            {sport}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+                    <Input
+                      id="hourlyRate"
+                      type="number"
+                      value={editedHourlyRate}
+                      onChange={(e) => setEditedHourlyRate(e.target.value)}
+                      placeholder="e.g. 75"
+                      data-testid="input-edit-rate"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={editedBio}
+                    onChange={(e) => setEditedBio(e.target.value)}
+                    placeholder="Tell athletes about yourself and your coaching style..."
+                    className="min-h-[100px]"
+                    data-testid="input-edit-bio"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={handleSave}
+                    disabled={updateMutation.isPending}
+                    data-testid="button-save-profile"
+                  >
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditedName(coach.name);
+                      setEditedLocation(coach.location);
+                      setEditedSport(coach.sport);
+                      setEditedBio(coach.bio || "");
+                      setEditedHourlyRate(coach.hourlyRate?.toString() || "");
+                    }}
+                    data-testid="button-cancel-edit"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

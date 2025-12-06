@@ -13,6 +13,7 @@ export interface IStorage {
   getCoach(id: string): Promise<Coach | undefined>;
   getCoachByEmail(email: string): Promise<Coach | undefined>;
   createCoach(coach: InsertCoach): Promise<Coach>;
+  updateCoach(id: string, updates: Partial<InsertCoach>): Promise<Coach | undefined>;
   getAllCoaches(): Promise<Coach[]>;
 
   createMessage(message: InsertMessage): Promise<Message>;
@@ -193,6 +194,23 @@ export class MemStorage implements IStorage {
     return coach;
   }
 
+  async updateCoach(id: string, updates: Partial<InsertCoach>): Promise<Coach | undefined> {
+    const coach = this.coaches.get(id);
+    if (!coach) {
+      return undefined;
+    }
+    
+    const updatedCoach: Coach = {
+      ...coach,
+      ...updates,
+      id: coach.id,
+      email: coach.email,
+    };
+    
+    this.coaches.set(id, updatedCoach);
+    return updatedCoach;
+  }
+
   async getAllCoaches(): Promise<Coach[]> {
     return Array.from(this.coaches.values());
   }
@@ -298,6 +316,15 @@ export class PostgresStorage implements IStorage {
 
   async createCoach(insertCoach: InsertCoach): Promise<Coach> {
     const result = await db.insert(coaches).values(insertCoach).returning();
+    return result[0];
+  }
+
+  async updateCoach(id: string, updates: Partial<InsertCoach>): Promise<Coach | undefined> {
+    const result = await db
+      .update(coaches)
+      .set(updates)
+      .where(eq(coaches.id, id))
+      .returning();
     return result[0];
   }
 
