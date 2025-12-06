@@ -13,6 +13,22 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### December 6, 2025
+- **Expandable Filter Panel on Coach Browse Page**: Enhanced athlete coach discovery
+  - Clickable "Filters" button expands/collapses filter options
+  - Filter by Sport (Soccer, Tennis, Golf buttons)
+  - Filter by Student Levels (Beginner, Intermediate, Advanced checkboxes)
+  - Filter by Coaching Types (Adults, Kids, Groups checkboxes)
+  - Filter by Hourly Rate range (min/max inputs)
+  - Badge shows active filter count
+  - "Clear all" button resets all filters
+  - All filters combine logically (coaches must match all criteria)
+
+- **Coach Availability Dummy Data**: Seeded realistic availability for testing
+  - All existing coaches now have availability slots for 14 days
+  - Time slots include morning (9-12) and afternoon (2-5) sessions
+  - 2-5 slots per day depending on coach
+  - Some days marked as unavailable for variety
+
 - **Coach Dashboard Improvements**: Redesigned coach dashboard for better usability
   - Added profile picture header with avatar dropdown (Edit Profile, Log Out options)
   - Removed profile table from coach dashboard, replaced with tabs (Availability, Edit Profile)
