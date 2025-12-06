@@ -12,6 +12,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 6, 2025
+- **Coach Dashboard Improvements**: Redesigned coach dashboard for better usability
+  - Added profile picture header with avatar dropdown (Edit Profile, Log Out options)
+  - Removed profile table from coach dashboard, replaced with tabs (Availability, Edit Profile)
+  - Edit Profile tab allows coaches to update their name, location, sport, hourly rate, and bio
+  - Added PATCH /api/coaches/:id endpoint for profile updates
+  
+- **Availability Calendar Enhancements**: Improved time slot management UX
+  - Replaced spinning wheel picker with simple AM/PM dropdown selects
+  - 12-hour format with 15-minute increments (dropdowns show ~4 items with scroll)
+  - Side-by-side layout: calendar on left, time slots on right (lg:grid-cols-2)
+  - "Mark Unavailable" button toggles to "Make Available" for unavailable dates
+  - Time slots display in AM/PM format (e.g., "9:00 AM - 10:00 AM")
+  - Validation ensures end time is after start time
+
 ### November 21, 2025
 - **App Rebranding**: Changed application name from "CoachConnect" to "CoachFinders"
   - Updated HTML title and meta tags
