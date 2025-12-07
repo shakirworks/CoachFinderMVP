@@ -81,96 +81,97 @@ export function BookingSummaryCard({
   }
 
   return (
-    <Card className="sticky top-4">
-      <CardHeader className="pb-3">
+    <Card className="xl:sticky xl:top-4">
+      <CardHeader className="p-3 sm:p-4 pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-lg">Booking Summary</CardTitle>
+          <CardTitle className="text-base">Booking Summary</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearAll}
-            className="text-muted-foreground"
+            className="text-xs text-muted-foreground h-7 px-2"
             data-testid="button-clear-all"
           >
             Clear All
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-3">
-          <div className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Selected Sessions ({selectedSlots.length})
+      <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            <Calendar className="h-3 w-3" />
+            {selectedSlots.length} Session{selectedSlots.length > 1 ? "s" : ""} Selected
           </div>
           
-          {sortedDates.map((date) => (
-            <div key={date} className="space-y-2">
-              <div className="text-sm font-medium">
-                {format(parseISO(date), "EEEE, MMMM d")}
-              </div>
-              <div className="space-y-1">
-                {groupedSlots[date]
-                  .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                  .map((slot) => (
-                    <div
-                      key={slot.slotId}
-                      className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
-                      data-testid={`summary-slot-${slot.slotId}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">
-                          {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => onRemoveSlot(slot.slotId)}
-                        data-testid={`button-remove-slot-${slot.slotId}`}
+          <div className="max-h-40 overflow-y-auto space-y-2">
+            {sortedDates.map((date) => (
+              <div key={date} className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {format(parseISO(date), "EEE, MMM d")}
+                </div>
+                <div className="space-y-1">
+                  {groupedSlots[date]
+                    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                    .map((slot) => (
+                      <div
+                        key={slot.slotId}
+                        className="flex items-center justify-between py-1.5 px-2 bg-muted/50 rounded-md"
+                        data-testid={`summary-slot-${slot.slotId}`}
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs">
+                            {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 flex-shrink-0"
+                          onClick={() => onRemoveSlot(slot.slotId)}
+                          data-testid={`button-remove-slot-${slot.slotId}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <Separator />
 
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">
-              {selectedSlots.length} session{selectedSlots.length > 1 ? "s" : ""} x ${hourlyRate}/hr
+              {selectedSlots.length} x ${hourlyRate}/hr
             </span>
             <span data-testid="text-subtotal">{formatCurrency(subtotalCents)}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">Service fee (10%)</span>
             <span data-testid="text-service-fee">{formatCurrency(serviceFeeCents)}</span>
           </div>
-          <Separator />
-          <div className="flex justify-between font-semibold text-base">
+          <Separator className="my-1.5" />
+          <div className="flex justify-between gap-2 font-semibold text-sm">
             <span>Total</span>
             <span data-testid="text-total">{formatCurrency(totalCents)}</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex-col gap-3">
+      <CardFooter className="p-3 sm:p-4 pt-0 flex-col gap-2">
         <Button
           className="w-full"
-          size="lg"
           disabled={true}
           data-testid="button-proceed-payment"
         >
           <CreditCard className="h-4 w-4 mr-2" />
           Proceed to Payment
         </Button>
-        <p className="text-xs text-muted-foreground text-center">
-          Payment integration coming soon. Google Pay will be available shortly.
+        <p className="text-[10px] text-muted-foreground text-center leading-tight">
+          Payment integration coming soon
         </p>
       </CardFooter>
     </Card>

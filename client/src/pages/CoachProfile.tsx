@@ -210,16 +210,19 @@ export default function CoachProfile() {
         </Card>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-xl sm:text-2xl font-bold mb-2">
             {athlete ? "Book a Session" : "Availability"}
           </h2>
           {athlete && (
-            <p className="text-muted-foreground mb-4" data-testid="text-booking-instructions">
-              Click on available time slots to select sessions. You can select multiple sessions.
+            <p className="text-sm text-muted-foreground mb-4" data-testid="text-booking-instructions">
+              Select a date, then click on time slots to add them to your booking.
             </p>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
+          
+          {/* Responsive layout: stack on mobile/tablet, side-by-side on xl screens */}
+          <div className="flex flex-col xl:flex-row gap-4">
+            {/* Calendar section - takes full width or flexible width */}
+            <div className="w-full xl:flex-1 xl:max-w-md">
               <AvailabilityCalendar 
                 coachId={coach.id} 
                 isEditable={false}
@@ -228,8 +231,10 @@ export default function CoachProfile() {
                 onSlotsChange={setSelectedSlots}
               />
             </div>
-            {athlete && (
-              <div className="lg:col-span-1">
+            
+            {/* Booking summary - appears below on smaller screens, beside on xl */}
+            {athlete && selectedSlots.length > 0 && (
+              <div className="w-full xl:w-80 xl:flex-shrink-0">
                 <BookingSummaryCard
                   coachId={coach.id}
                   coachName={coach.name}

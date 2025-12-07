@@ -256,18 +256,19 @@ export function AvailabilityCalendar({
   const unavailableDates = getDatesUnavailable();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Availability Calendar</CardTitle>
+    <Card className="overflow-visible">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Availability Calendar</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
+      <CardContent className="p-3 sm:p-6">
+        <div className="flex flex-col gap-4">
+          {/* Calendar section - centered */}
+          <div className="flex justify-center">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
-              className="rounded-md border"
+              className="rounded-md border w-full max-w-[280px]"
               modifiers={{
                 available: availableDates,
                 unavailable: unavailableDates,
@@ -289,7 +290,8 @@ export function AvailabilityCalendar({
             />
           </div>
 
-          <div className="space-y-4">
+          {/* Time slots section - below calendar */}
+          <div className="space-y-4 border-t pt-4">
             {selectedDate && (
               <>
                 <div className="flex items-center justify-between">
@@ -518,8 +520,8 @@ export function AvailabilityCalendar({
             )}
 
             {!selectedDate && (
-              <p className="text-sm text-muted-foreground">
-                Select a date to view or manage time slots
+              <p className="text-sm text-muted-foreground text-center">
+                Select a date to view available time slots
               </p>
             )}
           </div>
