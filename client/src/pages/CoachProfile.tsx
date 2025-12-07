@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ChatWindow from "@/components/ChatWindow";
-import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
+import { AvailabilityCalendar, type SelectedSlot } from "@/components/AvailabilityCalendar";
+import { BookingSummaryCard } from "@/components/BookingSummaryCard";
 import { MapPin, Mail, ArrowLeft, MessageCircle, DollarSign } from "lucide-react";
 import type { Coach, Athlete } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
@@ -16,6 +17,7 @@ export default function CoachProfile() {
   const [, setLocation] = useLocation();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
 
   useEffect(() => {
     const athleteData = localStorage.getItem("currentAthlete");
@@ -208,8 +210,38 @@ export default function CoachProfile() {
         </Card>
 
         <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">Availability</h2>
-          <AvailabilityCalendar coachId={coach.id} isEditable={false} />
+          <h2 className="text-2xl font-bold mb-4">
+            {athlete ? "Book a Session" : "Availability"}
+          </h2>
+          {athlete && (
+            <p className="text-muted-foreground mb-4" data-testid="text-booking-instructions">
+              Click on available time slots to select sessions. You can select multiple sessions.
+            </p>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <AvailabilityCalendar 
+                coachId={coach.id} 
+                isEditable={false}
+                isSelectable={!!athlete}
+                selectedSlots={selectedSlots}
+                onSlotsChange={setSelectedSlots}
+              />
+            </div>
+            {athlete && (
+              <div className="lg:col-span-1">
+                <BookingSummaryCard
+                  coachId={coach.id}
+                  coachName={coach.name}
+                  hourlyRate={parseFloat(coach.hourlyRate || "50")}
+                  selectedSlots={selectedSlots}
+                  onRemoveSlot={(slotId) => setSelectedSlots(slots => slots.filter(s => s.slotId !== slotId))}
+                  onClearAll={() => setSelectedSlots([])}
+                  athleteId={athlete.id}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

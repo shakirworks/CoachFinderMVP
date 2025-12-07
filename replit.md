@@ -12,6 +12,32 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### December 7, 2025
+- **Payment System Implementation (Design Phase)**: Added booking flow for athletes
+  - **Database Schema**: Added `purchases` and `invoices` tables
+    - Purchases track: athleteId, coachId, subtotal, serviceFee (10%), totalAmount, status, selectedSlots (JSONB)
+    - Invoices track: purchaseId, invoiceNumber, issuedAt, paidAt, providerReceiptUrl
+  - **Booking API Endpoints**:
+    - POST `/api/bookings/quote` - Calculate pricing for selected slots
+    - POST `/api/bookings/checkout` - Create pending purchase
+    - GET `/api/purchases/:id` - Get purchase status
+    - GET `/api/athletes/:athleteId/purchases` - Get athlete's purchases
+    - POST `/api/payments/webhook` - Payment confirmation (with idempotency)
+    - PATCH `/api/purchases/:id/cancel` - Cancel pending purchase
+  - **Frontend Booking Flow**:
+    - AvailabilityCalendar now supports multi-select for athletes (toggle slots on/off)
+    - BookingSummaryCard shows selected sessions, subtotal, service fee, and total
+    - "Proceed to Payment" button is disabled (design phase)
+    - Google Pay integration placeholder ready for implementation
+  - **Security**: Zod validation on all booking endpoints, idempotency checks on webhook
+
+- **Email Validation & Account Deletion**: Added for user management
+  - GET `/api/users/exists` - Check if email already exists
+  - EmailSignupForm validates email in real-time before allowing signup
+  - DELETE `/api/athletes/:id` and DELETE `/api/coaches/:id` with cascade deletes
+  - Account deletion removes all related data (messages, availability slots)
+  - Users can re-signup with same email after deletion
+
 ### December 6, 2025
 - **Expandable Filter Panel on Coach Browse Page**: Enhanced athlete coach discovery
   - Clickable "Filters" button expands/collapses filter options

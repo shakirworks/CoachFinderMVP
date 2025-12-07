@@ -1,7 +1,7 @@
-import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, athletes, coaches, messages, availabilitySlots } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, athletes, coaches, messages, availabilitySlots, purchases, invoices } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getAthlete(id: string): Promise<Athlete | undefined>;
@@ -26,8 +26,21 @@ export interface IStorage {
 
   createAvailabilitySlot(slot: InsertAvailabilitySlot): Promise<AvailabilitySlot>;
   getCoachAvailability(coachId: string): Promise<AvailabilitySlot[]>;
+  getAvailabilitySlotsByIds(slotIds: string[]): Promise<AvailabilitySlot[]>;
   deleteAvailabilitySlot(slotId: string): Promise<void>;
   clearDayAvailability(coachId: string, date: string): Promise<void>;
+
+  createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+  getPurchase(id: string): Promise<Purchase | undefined>;
+  getPurchasesByAthlete(athleteId: string): Promise<Purchase[]>;
+  getPurchasesByCoach(coachId: string): Promise<Purchase[]>;
+  updatePurchaseStatus(id: string, status: PurchaseStatus, providerTransactionId?: string): Promise<Purchase | undefined>;
+
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  getInvoiceByPurchase(purchaseId: string): Promise<Invoice | undefined>;
+  updateInvoicePaidAt(id: string, paidAt: Date, receiptUrl?: string): Promise<Invoice | undefined>;
+  generateInvoiceNumber(): Promise<string>;
 }
 
 export class MemStorage implements IStorage {
@@ -299,6 +312,50 @@ export class MemStorage implements IStorage {
   async clearDayAvailability(coachId: string, date: string): Promise<void> {
     throw new Error("Not implemented - use PostgresStorage");
   }
+
+  async getAvailabilitySlotsByIds(slotIds: string[]): Promise<AvailabilitySlot[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async createPurchase(purchase: InsertPurchase): Promise<Purchase> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getPurchase(id: string): Promise<Purchase | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getPurchasesByAthlete(athleteId: string): Promise<Purchase[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getPurchasesByCoach(coachId: string): Promise<Purchase[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async updatePurchaseStatus(id: string, status: PurchaseStatus, providerTransactionId?: string): Promise<Purchase | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getInvoiceByPurchase(purchaseId: string): Promise<Invoice | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async updateInvoicePaidAt(id: string, paidAt: Date, receiptUrl?: string): Promise<Invoice | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async generateInvoiceNumber(): Promise<string> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
 }
 
 export class PostgresStorage implements IStorage {
@@ -451,6 +508,92 @@ export class PostgresStorage implements IStorage {
       startTime: "UNAVAILABLE",
       endTime: "UNAVAILABLE",
     });
+  }
+
+  async getAvailabilitySlotsByIds(slotIds: string[]): Promise<AvailabilitySlot[]> {
+    if (slotIds.length === 0) return [];
+    return await db
+      .select()
+      .from(availabilitySlots)
+      .where(inArray(availabilitySlots.id, slotIds));
+  }
+
+  async createPurchase(insertPurchase: InsertPurchase): Promise<Purchase> {
+    const result = await db.insert(purchases).values(insertPurchase).returning();
+    return result[0];
+  }
+
+  async getPurchase(id: string): Promise<Purchase | undefined> {
+    const result = await db.select().from(purchases).where(eq(purchases.id, id));
+    return result[0];
+  }
+
+  async getPurchasesByAthlete(athleteId: string): Promise<Purchase[]> {
+    return await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.athleteId, athleteId))
+      .orderBy(desc(purchases.createdAt));
+  }
+
+  async getPurchasesByCoach(coachId: string): Promise<Purchase[]> {
+    return await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.coachId, coachId))
+      .orderBy(desc(purchases.createdAt));
+  }
+
+  async updatePurchaseStatus(id: string, status: PurchaseStatus, providerTransactionId?: string): Promise<Purchase | undefined> {
+    const updates: Partial<Purchase> = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    if (providerTransactionId) {
+      updates.providerTransactionId = providerTransactionId;
+    }
+    const result = await db
+      .update(purchases)
+      .set(updates)
+      .where(eq(purchases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    const result = await db.insert(invoices).values(insertInvoice).returning();
+    return result[0];
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const result = await db.select().from(invoices).where(eq(invoices.id, id));
+    return result[0];
+  }
+
+  async getInvoiceByPurchase(purchaseId: string): Promise<Invoice | undefined> {
+    const result = await db.select().from(invoices).where(eq(invoices.purchaseId, purchaseId));
+    return result[0];
+  }
+
+  async updateInvoicePaidAt(id: string, paidAt: Date, receiptUrl?: string): Promise<Invoice | undefined> {
+    const updates: Partial<Invoice> = { paidAt };
+    if (receiptUrl) {
+      updates.providerReceiptUrl = receiptUrl;
+    }
+    const result = await db
+      .update(invoices)
+      .set(updates)
+      .where(eq(invoices.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async generateInvoiceNumber(): Promise<string> {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `INV-${year}${month}-${random}`;
   }
 }
 

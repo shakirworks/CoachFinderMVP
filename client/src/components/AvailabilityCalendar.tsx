@@ -17,12 +17,28 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { AvailabilitySlot } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
+export interface SelectedSlot {
+  slotId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface AvailabilityCalendarProps {
   coachId: string;
   isEditable?: boolean;
+  isSelectable?: boolean;
+  selectedSlots?: SelectedSlot[];
+  onSlotsChange?: (slots: SelectedSlot[]) => void;
 }
 
-export function AvailabilityCalendar({ coachId, isEditable = false }: AvailabilityCalendarProps) {
+export function AvailabilityCalendar({ 
+  coachId, 
+  isEditable = false, 
+  isSelectable = false,
+  selectedSlots = [],
+  onSlotsChange,
+}: AvailabilityCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddingSlot, setIsAddingSlot] = useState(false);
   const [startHour, setStartHour] = useState("9");
@@ -208,6 +224,30 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
     }
   };
 
+  const isSlotSelected = (slotId: string) => {
+    return selectedSlots.some(s => s.slotId === slotId);
+  };
+
+  const toggleSlotSelection = (slot: AvailabilitySlot) => {
+    if (!isSelectable || !onSlotsChange) return;
+    
+    const isCurrentlySelected = isSlotSelected(slot.id);
+    
+    if (isCurrentlySelected) {
+      onSlotsChange(selectedSlots.filter(s => s.slotId !== slot.id));
+    } else {
+      onSlotsChange([
+        ...selectedSlots,
+        {
+          slotId: slot.id,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        },
+      ]);
+    }
+  };
+
   const hours = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
   const minutes = ["00", "15", "30", "45"];
   const selectedDateSlots = selectedDate ? getAvailableSlots(selectedDate) : [];
@@ -302,28 +342,55 @@ export function AvailabilityCalendar({ coachId, isEditable = false }: Availabili
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {selectedDateSlots.map((slot) => (
-                          <div
-                            key={slot.id}
-                            className="flex items-center justify-between p-3 border rounded-md"
-                            data-testid={`slot-${slot.id}`}
-                          >
-                            <Badge variant="outline" className="text-sm">
-                              {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
-                            </Badge>
-                            {isEditable && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteSlotMutation.mutate(slot.id)}
-                                disabled={deleteSlotMutation.isPending}
-                                data-testid={`button-delete-slot-${slot.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
+                        {selectedDateSlots.map((slot) => {
+                          const slotIsSelected = isSlotSelected(slot.id);
+                          return (
+                            <div
+                              key={slot.id}
+                              className={`flex items-center justify-between p-3 border rounded-md transition-colors ${
+                                isSelectable 
+                                  ? slotIsSelected
+                                    ? "border-primary bg-primary/10 cursor-pointer"
+                                    : "hover:border-primary/50 cursor-pointer hover-elevate"
+                                  : ""
+                              }`}
+                              onClick={() => isSelectable && toggleSlotSelection(slot)}
+                              data-testid={`slot-${slot.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isSelectable && (
+                                  <div 
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                      slotIsSelected 
+                                        ? "border-primary bg-primary text-primary-foreground" 
+                                        : "border-muted-foreground"
+                                    }`}
+                                    data-testid={`checkbox-slot-${slot.id}`}
+                                  >
+                                    {slotIsSelected && <Check className="h-3 w-3" />}
+                                  </div>
+                                )}
+                                <Badge variant={slotIsSelected ? "default" : "outline"} className="text-sm">
+                                  {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
+                                </Badge>
+                              </div>
+                              {isEditable && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSlotMutation.mutate(slot.id);
+                                  }}
+                                  disabled={deleteSlotMutation.isPending}
+                                  data-testid={`button-delete-slot-${slot.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

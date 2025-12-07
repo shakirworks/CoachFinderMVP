@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -76,3 +76,82 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertAvailabilitySlot = z.infer<typeof insertAvailabilitySlotSchema>;
 export type AvailabilitySlot = typeof availabilitySlots.$inferSelect;
+
+export const purchaseStatusEnum = z.enum(["pending", "authorized", "succeeded", "failed", "refunded", "cancelled"]);
+export type PurchaseStatus = z.infer<typeof purchaseStatusEnum>;
+
+export const purchases = pgTable("purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  athleteId: varchar("athlete_id").notNull().references(() => athletes.id),
+  coachId: varchar("coach_id").notNull().references(() => coaches.id),
+  subtotal: integer("subtotal").notNull(),
+  serviceFee: integer("service_fee").notNull(),
+  totalAmount: integer("total_amount").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  status: text("status").notNull().default("pending"),
+  paymentProvider: text("payment_provider"),
+  providerSessionId: text("provider_session_id"),
+  providerTransactionId: text("provider_transaction_id"),
+  selectedSlots: jsonb("selected_slots").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseId: varchar("purchase_id").notNull().references(() => purchases.id),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  issuedAt: timestamp("issued_at").notNull().default(sql`now()`),
+  paidAt: timestamp("paid_at"),
+  providerReceiptUrl: text("provider_receipt_url"),
+  metadata: jsonb("metadata"),
+});
+
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: purchaseStatusEnum.optional(),
+  selectedSlots: z.array(z.object({
+    slotId: z.string(),
+    date: z.string(),
+    startTime: z.string(),
+    endTime: z.string(),
+  })),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  issuedAt: true,
+});
+
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type Purchase = typeof purchases.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+export const bookingQuoteRequestSchema = z.object({
+  coachId: z.string().min(1, "Coach ID is required"),
+  slotIds: z.array(z.string()).min(1, "At least one slot must be selected"),
+});
+
+export type BookingQuoteRequest = z.infer<typeof bookingQuoteRequestSchema>;
+
+export const bookingCheckoutRequestSchema = z.object({
+  athleteId: z.string().min(1, "Athlete ID is required"),
+  coachId: z.string().min(1, "Coach ID is required"),
+  slotIds: z.array(z.string()).min(1, "At least one slot must be selected"),
+});
+
+export type BookingCheckoutRequest = z.infer<typeof bookingCheckoutRequestSchema>;
+
+export const paymentWebhookSchema = z.object({
+  purchaseId: z.string().min(1, "Purchase ID is required"),
+  status: purchaseStatusEnum,
+  transactionId: z.string().optional(),
+  receiptUrl: z.string().url().optional(),
+  signature: z.string().optional(),
+});
+
+export type PaymentWebhookRequest = z.infer<typeof paymentWebhookSchema>;
