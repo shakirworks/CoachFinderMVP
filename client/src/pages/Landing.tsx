@@ -146,6 +146,7 @@ export default function Landing() {
     coachingOptions?: string[];
     yearsOfExperience?: string;
     studentLevels?: string[];
+    availableForCoachRequests?: boolean;
   }) => {
     const data: any = {
       name: profile.name,
@@ -154,6 +155,10 @@ export default function Landing() {
       email: email,
       profileImage: profile.profileImage,
     };
+
+    if (role === "athlete") {
+      data.availableForCoachRequests = profile.availableForCoachRequests;
+    }
 
     if (role === "coach") {
       data.certification = profile.certification;

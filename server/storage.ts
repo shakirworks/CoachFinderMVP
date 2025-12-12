@@ -165,6 +165,7 @@ export class MemStorage implements IStorage {
       location: insertAthlete.location,
       email: insertAthlete.email,
       profileImage: insertAthlete.profileImage ?? null,
+      availableForCoachRequests: insertAthlete.availableForCoachRequests ?? "false",
     };
     this.athletes.set(id, athlete);
     return athlete;
@@ -894,5 +895,112 @@ async function seedAvailabilityForExistingCoaches() {
 }
 
 seedAvailabilityForExistingCoaches().catch(console.error);
+
+async function seedDemoBookings() {
+  // Check if we already have invoices (demo already seeded)
+  const existingInvoices = await db.select().from(invoices).limit(1);
+  if (existingInvoices.length > 0) {
+    return;
+  }
+
+  // Get existing athletes and coaches
+  const allAthletes = await db.select().from(athletes).limit(3);
+  const allCoaches = await db.select().from(coaches).limit(5);
+
+  if (allAthletes.length === 0 || allCoaches.length === 0) {
+    return;
+  }
+
+  const today = new Date();
+  
+  // Create sample bookings for each athlete
+  for (let i = 0; i < allAthletes.length; i++) {
+    const athlete = allAthletes[i];
+    const numBookings = 2 + (i % 2); // 2-3 bookings per athlete
+    
+    for (let j = 0; j < numBookings && j < allCoaches.length; j++) {
+      const coach = allCoaches[(i + j) % allCoaches.length];
+      const hourlyRate = parseInt(coach.hourlyRate || "75");
+      const numSessions = 1 + (j % 3); // 1-3 sessions per booking
+      
+      const subtotal = hourlyRate * numSessions * 100; // in cents
+      const serviceFee = Math.round(subtotal * 0.1);
+      const totalAmount = subtotal + serviceFee;
+      
+      // Create session details
+      const sessionDetails = [];
+      for (let s = 0; s < numSessions; s++) {
+        const sessionDate = new Date(today);
+        sessionDate.setDate(today.getDate() + s + 1 + (j * 3));
+        sessionDetails.push({
+          slotId: `demo-slot-${i}-${j}-${s}`,
+          date: sessionDate.toISOString().split('T')[0],
+          startTime: `${9 + s}:00`,
+          endTime: `${10 + s}:00`,
+        });
+      }
+      
+      // Create a dummy purchase first
+      const purchaseResult = await db.insert(purchases).values({
+        athleteId: athlete.id,
+        coachId: coach.id,
+        subtotal,
+        serviceFee,
+        totalAmount,
+        currency: "USD",
+        status: "succeeded",
+        paymentProvider: "stripe",
+        providerSessionId: `demo-session-${i}-${j}`,
+        providerTransactionId: `demo-pi-${i}-${j}`,
+        selectedSlots: sessionDetails,
+      }).returning();
+      
+      const purchase = purchaseResult[0];
+      
+      // Create the invoice
+      const invoiceDate = new Date(today);
+      invoiceDate.setDate(today.getDate() - (i + j));
+      
+      await db.insert(invoices).values({
+        purchaseId: purchase.id,
+        invoiceNumber: `INV-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}-DEMO${i}${j}`,
+        athleteId: athlete.id,
+        coachId: coach.id,
+        athleteName: athlete.name,
+        athleteEmail: athlete.email,
+        coachName: coach.name,
+        coachEmail: coach.email,
+        subtotal,
+        serviceFee,
+        totalAmount,
+        currency: "USD",
+        sessionDetails,
+        issuedAt: invoiceDate,
+        paidAt: invoiceDate,
+        providerReceiptUrl: null,
+        metadata: { demo: true },
+      });
+      
+      // Create notification for the coach
+      await db.insert(notifications).values({
+        recipientId: coach.id,
+        recipientType: "coach",
+        type: "new_booking",
+        title: "New Booking Received!",
+        message: `${athlete.name} booked ${numSessions} session${numSessions > 1 ? 's' : ''} with you. You'll receive $${(subtotal / 100).toFixed(2)} (after platform fee).`,
+        data: {
+          purchaseId: purchase.id,
+          athleteId: athlete.id,
+          athleteName: athlete.name,
+          sessionCount: numSessions,
+        },
+      });
+    }
+  }
+  
+  console.log("Demo bookings seeded successfully");
+}
+
+seedDemoBookings().catch(console.error);
 
 export const storage = new PostgresStorage();
