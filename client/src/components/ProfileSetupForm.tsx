@@ -34,6 +34,7 @@ interface ProfileSetupFormProps {
     coachingOptions?: string[];
     yearsOfExperience?: string;
     studentLevels?: string[];
+    availableForCoachRequests?: boolean;
   }) => void;
   onBack: () => void;
 }
@@ -53,6 +54,7 @@ export default function ProfileSetupForm({
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [selectedSport, setSelectedSport] = useState<string>("");
+  const [availableForCoachRequests, setAvailableForCoachRequests] = useState(false);
   
   const [certification, setCertification] = useState("");
   const [performanceLevel, setPerformanceLevel] = useState("");
@@ -88,6 +90,10 @@ export default function ProfileSetupForm({
     e.preventDefault();
     if (name && location && selectedSport) {
       const profile: any = { name, location, sports: [selectedSport] };
+      
+      if (role === "athlete") {
+        profile.availableForCoachRequests = availableForCoachRequests;
+      }
       
       if (role === "coach") {
         profile.certification = certification;
@@ -193,6 +199,28 @@ export default function ProfileSetupForm({
               </p>
             )}
           </div>
+
+          {role === "athlete" && (
+            <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="availableForCoachRequests"
+                checked={availableForCoachRequests}
+                onCheckedChange={(checked) => setAvailableForCoachRequests(checked === true)}
+                data-testid="checkbox-coach-requests"
+              />
+              <div className="space-y-1">
+                <Label 
+                  htmlFor="availableForCoachRequests" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Available for inbound requests from coaches
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Allow coaches to reach out to you with training opportunities and offers
+                </p>
+              </div>
+            </div>
+          )}
 
           {role === "coach" && (
             <>

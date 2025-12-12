@@ -17,8 +17,11 @@ export default function Landing() {
   const { toast } = useToast();
 
   const createAthleteMutation = useMutation({
-    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string }) => {
-      const res = await apiRequest("POST", "/api/athletes", data);
+    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string; availableForCoachRequests?: boolean }) => {
+      const res = await apiRequest("POST", "/api/athletes", {
+        ...data,
+        availableForCoachRequests: data.availableForCoachRequests ? "true" : "false",
+      });
       return await res.json();
     },
     onSuccess: (athlete: Athlete) => {

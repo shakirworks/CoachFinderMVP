@@ -29,8 +29,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatWindow from "@/components/ChatWindow";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2 } from "lucide-react";
-import type { Athlete, Coach, Message } from "@shared/schema";
+import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2, Calendar, Clock, Download, CreditCard, Loader2 } from "lucide-react";
+import type { Athlete, Coach, Message, Invoice } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
@@ -52,6 +52,8 @@ export default function AthleteProfile() {
     const tabParam = urlParams.get('tab');
     if (tabParam === 'messages') {
       setActiveTab('messages');
+    } else if (tabParam === 'bookings') {
+      setActiveTab('bookings');
     } else {
       setActiveTab('profile');
     }
@@ -59,6 +61,17 @@ export default function AthleteProfile() {
 
   const { data: messageThreads } = useQuery<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>({
     queryKey: [`/api/athletes/${athlete?.id}/messages`],
+    enabled: !!athlete?.id,
+  });
+
+  // Fetch athlete's booked sessions (invoices)
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
+    queryKey: ['/api/athletes', athlete?.id, 'invoices'],
+    queryFn: async () => {
+      if (!athlete?.id) return [];
+      const res = await fetch(`/api/athletes/${athlete.id}/invoices`);
+      return res.json();
+    },
     enabled: !!athlete?.id,
   });
 
@@ -174,8 +187,9 @@ export default function AthleteProfile() {
         </Button>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+            <TabsTrigger value="bookings" data-testid="tab-bookings">Bookings</TabsTrigger>
             <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
           </TabsList>
 
@@ -359,6 +373,158 @@ export default function AthleteProfile() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="bookings">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                  <Calendar className="h-6 w-6" />
+                  My Booked Sessions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invoicesLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading bookings...</p>
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No bookings yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Book sessions with coaches to see them here
+                    </p>
+                    <Button
+                      className="mt-4"
+                      onClick={() => setLocation("/coaches")}
+                      data-testid="button-browse-coaches-booking"
+                    >
+                      Browse Coaches
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {invoices.map((invoice) => {
+                      const sessionDetails = invoice.sessionDetails as Array<{
+                        slotId: string;
+                        date: string;
+                        startTime: string;
+                        endTime: string;
+                      }>;
+
+                      const formatTime = (time: string) => {
+                        const [hours, minutes] = time.split(":");
+                        let h = parseInt(hours);
+                        const period = h >= 12 ? "PM" : "AM";
+                        if (h > 12) h -= 12;
+                        if (h === 0) h = 12;
+                        return `${h}:${minutes} ${period}`;
+                      };
+
+                      return (
+                        <div 
+                          key={invoice.id}
+                          className="p-4 rounded-lg border bg-card"
+                          data-testid={`booking-${invoice.id}`}
+                        >
+                          <div className="flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {invoice.invoiceNumber}
+                                  </Badge>
+                                  <Badge className="text-xs bg-green-600">Paid</Badge>
+                                </div>
+                                <p className="font-semibold text-lg">{invoice.coachName}</p>
+                                <p className="text-sm text-muted-foreground">{invoice.coachEmail}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="text-right">
+                                  <p className="text-sm text-muted-foreground">Total Paid</p>
+                                  <p className="text-lg font-semibold">
+                                    ${(invoice.totalAmount / 100).toFixed(2)}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(`/api/invoices/${invoice.id}/receipt`, '_blank')}
+                                  data-testid={`button-receipt-${invoice.id}`}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Receipt
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="pt-3 border-t">
+                              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                {sessionDetails.length} Session{sessionDetails.length > 1 ? 's' : ''} Booked
+                              </p>
+                              <div className="grid gap-2">
+                                {sessionDetails.map((session, idx) => (
+                                  <div 
+                                    key={idx}
+                                    className="flex items-center gap-3 p-2 bg-muted/50 rounded text-sm"
+                                  >
+                                    <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="font-medium">{session.date}</span>
+                                    <span className="text-muted-foreground">
+                                      {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {invoice.issuedAt && (
+                              <p className="text-xs text-muted-foreground">
+                                Booked {formatDistanceToNow(new Date(invoice.issuedAt), { addSuffix: true })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                  <CreditCard className="h-6 w-6 opacity-50" />
+                  Payment Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-muted-foreground">Stripe Connect</p>
+                      <p className="text-sm text-muted-foreground">
+                        Payment processing is only available for coaches
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="mt-3 opacity-50 cursor-not-allowed"
+                    disabled
+                    data-testid="button-stripe-disabled"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Connect with Stripe
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="messages">
