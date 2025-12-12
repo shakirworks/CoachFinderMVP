@@ -17,7 +17,7 @@ export default function Landing() {
   const { toast } = useToast();
 
   const createAthleteMutation = useMutation({
-    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string; availableForCoachRequests?: boolean }) => {
+    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string; availableForCoachRequests?: boolean; gender?: string; age?: string; skillLevel?: string; preferredCoachGender?: string }) => {
       const res = await apiRequest("POST", "/api/athletes", {
         ...data,
         availableForCoachRequests: data.availableForCoachRequests ? "true" : "false",
@@ -147,6 +147,8 @@ export default function Landing() {
     yearsOfExperience?: string;
     studentLevels?: string[];
     availableForCoachRequests?: boolean;
+    skillLevel?: string;
+    preferredCoachGender?: string;
   }) => {
     const data: any = {
       name: profile.name,
@@ -158,6 +160,10 @@ export default function Landing() {
 
     if (role === "athlete") {
       data.availableForCoachRequests = profile.availableForCoachRequests;
+      data.gender = profile.gender;
+      data.age = profile.age;
+      data.skillLevel = profile.skillLevel;
+      data.preferredCoachGender = profile.preferredCoachGender;
     }
 
     if (role === "coach") {

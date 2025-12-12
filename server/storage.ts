@@ -166,6 +166,10 @@ export class MemStorage implements IStorage {
       email: insertAthlete.email,
       profileImage: insertAthlete.profileImage ?? null,
       availableForCoachRequests: insertAthlete.availableForCoachRequests ?? "false",
+      gender: insertAthlete.gender ?? null,
+      age: insertAthlete.age ?? null,
+      skillLevel: insertAthlete.skillLevel ?? null,
+      preferredCoachGender: insertAthlete.preferredCoachGender ?? null,
     };
     this.athletes.set(id, athlete);
     return athlete;

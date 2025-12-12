@@ -35,6 +35,8 @@ interface ProfileSetupFormProps {
     yearsOfExperience?: string;
     studentLevels?: string[];
     availableForCoachRequests?: boolean;
+    skillLevel?: string;
+    preferredCoachGender?: string;
   }) => void;
   onBack: () => void;
 }
@@ -55,6 +57,11 @@ export default function ProfileSetupForm({
   const [location, setLocation] = useState("");
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [availableForCoachRequests, setAvailableForCoachRequests] = useState(false);
+  
+  const [athleteGender, setAthleteGender] = useState("");
+  const [athleteAge, setAthleteAge] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
+  const [preferredCoachGender, setPreferredCoachGender] = useState("");
   
   const [certification, setCertification] = useState("");
   const [performanceLevel, setPerformanceLevel] = useState("");
@@ -93,6 +100,10 @@ export default function ProfileSetupForm({
       
       if (role === "athlete") {
         profile.availableForCoachRequests = availableForCoachRequests;
+        profile.gender = athleteGender || undefined;
+        profile.age = athleteAge || undefined;
+        profile.skillLevel = skillLevel || undefined;
+        profile.preferredCoachGender = preferredCoachGender || undefined;
       }
       
       if (role === "coach") {
@@ -201,25 +212,91 @@ export default function ProfileSetupForm({
           </div>
 
           {role === "athlete" && (
-            <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
-              <Checkbox
-                id="availableForCoachRequests"
-                checked={availableForCoachRequests}
-                onCheckedChange={(checked) => setAvailableForCoachRequests(checked === true)}
-                data-testid="checkbox-coach-requests"
-              />
-              <div className="space-y-1">
-                <Label 
-                  htmlFor="availableForCoachRequests" 
-                  className="text-sm font-medium cursor-pointer"
-                >
-                  Available for inbound requests from coaches
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Allow coaches to reach out to you with training opportunities and offers
-                </p>
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="athleteGender">Gender</Label>
+                  <Select value={athleteGender} onValueChange={setAthleteGender}>
+                    <SelectTrigger className="h-12" data-testid="select-athlete-gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Non-binary">Non-binary</SelectItem>
+                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="athleteAge">Age</Label>
+                  <Input
+                    id="athleteAge"
+                    type="number"
+                    placeholder="e.g., 25"
+                    value={athleteAge}
+                    onChange={(e) => setAthleteAge(e.target.value)}
+                    className="h-12"
+                    data-testid="input-athlete-age"
+                  />
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
               </div>
-            </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="skillLevel">Skill Level</Label>
+                  <Select value={skillLevel} onValueChange={setSkillLevel}>
+                    <SelectTrigger className="h-12" data-testid="select-skill-level">
+                      <SelectValue placeholder="Select your level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="preferredCoachGender">Preferred Coach Gender</Label>
+                  <Select value={preferredCoachGender} onValueChange={setPreferredCoachGender}>
+                    <SelectTrigger className="h-12" data-testid="select-preferred-coach-gender">
+                      <SelectValue placeholder="Select preference" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="No Preference">No Preference</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Optional</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3 p-4 bg-muted/50 rounded-lg">
+                <Checkbox
+                  id="availableForCoachRequests"
+                  checked={availableForCoachRequests}
+                  onCheckedChange={(checked) => setAvailableForCoachRequests(checked === true)}
+                  data-testid="checkbox-coach-requests"
+                />
+                <div className="space-y-1">
+                  <Label 
+                    htmlFor="availableForCoachRequests" 
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Available for inbound requests from coaches
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow coaches to reach out to you with training opportunities and offers
+                  </p>
+                </div>
+              </div>
+            </>
           )}
 
           {role === "coach" && (

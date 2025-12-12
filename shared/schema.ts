@@ -11,6 +11,10 @@ export const athletes = pgTable("athletes", {
   email: text("email").notNull().unique(),
   profileImage: text("profile_image"),
   availableForCoachRequests: text("available_for_coach_requests").default("false"),
+  gender: text("gender"),
+  age: text("age"),
+  skillLevel: text("skill_level"),
+  preferredCoachGender: text("preferred_coach_gender"),
 });
 
 export const coaches = pgTable("coaches", {
