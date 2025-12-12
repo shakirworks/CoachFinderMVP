@@ -38,8 +38,8 @@ import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import ChatWindow from "@/components/ChatWindow";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink } from "lucide-react";
-import type { Coach, Athlete, Message } from "@shared/schema";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar } from "lucide-react";
+import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
@@ -149,6 +149,28 @@ export default function CoachOwnProfile() {
         variant: "destructive",
       });
     },
+  });
+
+  // Fetch coach's invoices (bookings they received)
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
+    queryKey: ['/api/coaches', coach?.id, 'invoices'],
+    queryFn: async () => {
+      if (!coach?.id) return [];
+      const res = await fetch(`/api/coaches/${coach.id}/invoices`);
+      return res.json();
+    },
+    enabled: !!coach?.id,
+  });
+
+  // Fetch coach's notifications
+  const { data: notifications = [], isLoading: notificationsLoading } = useQuery<Notification[]>({
+    queryKey: ['/api/coaches', coach?.id, 'notifications'],
+    queryFn: async () => {
+      if (!coach?.id) return [];
+      const res = await fetch(`/api/coaches/${coach.id}/notifications`);
+      return res.json();
+    },
+    enabled: !!coach?.id,
   });
 
   const handleLogout = () => {
@@ -356,6 +378,128 @@ export default function CoachOwnProfile() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Notifications Section */}
+            {notifications.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                    <Bell className="h-6 w-6" />
+                    Recent Notifications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {notifications.slice(0, 5).map((notification) => (
+                      <div 
+                        key={notification.id}
+                        className={`p-4 rounded-lg border ${notification.read === 'false' ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-muted'}`}
+                        data-testid={`notification-${notification.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`h-2 w-2 rounded-full mt-2 ${notification.read === 'false' ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                          <div className="flex-1">
+                            <p className="font-medium">{notification.title}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Bookings History Section */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                  <FileText className="h-6 w-6" />
+                  Booking History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invoicesLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading bookings...</p>
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No bookings yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      When athletes book sessions with you, they'll appear here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {invoices.map((invoice) => {
+                      const sessionDetails = invoice.sessionDetails as Array<{
+                        slotId: string;
+                        date: string;
+                        startTime: string;
+                        endTime: string;
+                      }>;
+                      
+                      return (
+                        <div 
+                          key={invoice.id}
+                          className="p-4 rounded-lg border bg-card"
+                          data-testid={`invoice-${invoice.id}`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {invoice.invoiceNumber}
+                                </Badge>
+                                <Badge className="text-xs bg-green-600">Paid</Badge>
+                              </div>
+                              <p className="font-medium">{invoice.athleteName}</p>
+                              <p className="text-sm text-muted-foreground">{invoice.athleteEmail}</p>
+                              <div className="mt-2 text-sm">
+                                <span className="text-muted-foreground">{sessionDetails.length} session{sessionDetails.length > 1 ? 's' : ''}</span>
+                                {sessionDetails.length > 0 && (
+                                  <span className="text-muted-foreground ml-2">
+                                    ({sessionDetails.map(s => s.date).join(', ')})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="text-right">
+                                <p className="text-sm text-muted-foreground">You receive</p>
+                                <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                                  ${(invoice.subtotal / 100).toFixed(2)}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(`/api/invoices/${invoice.id}/receipt`, '_blank')}
+                                data-testid={`button-view-receipt-${invoice.id}`}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Receipt
+                              </Button>
+                            </div>
+                          </div>
+                          {invoice.issuedAt && (
+                            <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                              Booked {formatDistanceToNow(new Date(invoice.issuedAt), { addSuffix: true })}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
