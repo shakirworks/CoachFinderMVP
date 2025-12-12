@@ -35,6 +35,7 @@ export interface IStorage {
   getPurchasesByAthlete(athleteId: string): Promise<Purchase[]>;
   getPurchasesByCoach(coachId: string): Promise<Purchase[]>;
   updatePurchaseStatus(id: string, status: PurchaseStatus, providerTransactionId?: string): Promise<Purchase | undefined>;
+  updatePurchaseSession(id: string, sessionId: string): Promise<Purchase | undefined>;
 
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string): Promise<Invoice | undefined>;
@@ -128,6 +129,9 @@ export class MemStorage implements IStorage {
         coachingOptions: coachingOptionsOptions[index % coachingOptionsOptions.length],
         yearsOfExperience: experienceYears[index % experienceYears.length],
         studentLevels: studentLevelsOptions[index % studentLevelsOptions.length],
+        stripeAccountId: null,
+        stripeAccountStatus: null,
+        stripeOnboardingComplete: null,
       };
       this.coaches.set(id, coachData);
     });
@@ -211,6 +215,9 @@ export class MemStorage implements IStorage {
       coachingOptions: insertCoach.coachingOptions ?? null,
       yearsOfExperience: insertCoach.yearsOfExperience ?? null,
       studentLevels: insertCoach.studentLevels ?? null,
+      stripeAccountId: null,
+      stripeAccountStatus: null,
+      stripeOnboardingComplete: null,
     };
     this.coaches.set(id, coach);
     return coach;
@@ -334,6 +341,10 @@ export class MemStorage implements IStorage {
   }
 
   async updatePurchaseStatus(id: string, status: PurchaseStatus, providerTransactionId?: string): Promise<Purchase | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async updatePurchaseSession(id: string, sessionId: string): Promise<Purchase | undefined> {
     throw new Error("Not implemented - use PostgresStorage");
   }
 
@@ -555,6 +566,18 @@ export class PostgresStorage implements IStorage {
     const result = await db
       .update(purchases)
       .set(updates)
+      .where(eq(purchases.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updatePurchaseSession(id: string, sessionId: string): Promise<Purchase | undefined> {
+    const result = await db
+      .update(purchases)
+      .set({ 
+        providerSessionId: sessionId,
+        updatedAt: new Date() 
+      })
       .where(eq(purchases.id, id))
       .returning();
     return result[0];

@@ -38,7 +38,7 @@ import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import ChatWindow from "@/components/ChatWindow";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2 } from "lucide-react";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 import type { Coach, Athlete, Message } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
@@ -65,6 +65,8 @@ export default function CoachOwnProfile() {
       setActiveTab('messages');
     } else if (tabParam === 'edit') {
       setActiveTab('edit');
+    } else if (tabParam === 'payments') {
+      setActiveTab('payments');
     } else {
       setActiveTab('availability');
     }
@@ -99,6 +101,25 @@ export default function CoachOwnProfile() {
         title: "Profile updated!",
         description: "Your changes have been saved.",
       });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const stripeOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/coaches/${coach!.id}/stripe/connect`, {});
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -221,10 +242,11 @@ export default function CoachOwnProfile() {
 
       <div className="max-w-5xl mx-auto p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="availability" data-testid="tab-availability">Availability</TabsTrigger>
             <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
-            <TabsTrigger value="edit" data-testid="tab-edit">Edit Profile</TabsTrigger>
+            <TabsTrigger value="payments" data-testid="tab-payments">Payments</TabsTrigger>
+            <TabsTrigger value="edit" data-testid="tab-edit">Edit</TabsTrigger>
           </TabsList>
 
           <TabsContent value="availability">
@@ -243,6 +265,96 @@ export default function CoachOwnProfile() {
                   <p className="text-sm text-muted-foreground mt-2">
                     Athletes will be able to message you about coaching opportunities
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                  <CreditCard className="h-6 w-6" />
+                  Payment Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-medium">Stripe Connect</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Stripe account to receive payments from athletes. 
+                    A 10% service fee is deducted from each booking.
+                  </p>
+                  
+                  {coach.stripeOnboardingComplete === "true" ? (
+                    <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-green-700 dark:text-green-300">Account Connected</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">
+                          Your Stripe account is set up and ready to receive payments.
+                        </p>
+                      </div>
+                    </div>
+                  ) : coach.stripeAccountId ? (
+                    <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-yellow-700 dark:text-yellow-300">Onboarding Incomplete</p>
+                        <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                          Please complete your Stripe account setup to receive payments.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => stripeOnboardingMutation.mutate()}
+                        disabled={stripeOnboardingMutation.isPending}
+                        data-testid="button-continue-onboarding"
+                      >
+                        {stripeOnboardingMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
+                        Continue Setup
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">Not Connected</p>
+                        <p className="text-sm text-muted-foreground">
+                          Set up your Stripe account to start accepting payments for coaching sessions.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => stripeOnboardingMutation.mutate()}
+                        disabled={stripeOnboardingMutation.isPending}
+                        data-testid="button-connect-stripe"
+                      >
+                        {stripeOnboardingMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CreditCard className="h-4 w-4 mr-2" />
+                        )}
+                        Connect with Stripe
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-6 border-t space-y-4">
+                  <h3 className="font-medium">Payment Information</h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Hourly Rate</p>
+                      <p className="text-xl font-semibold">${coach.hourlyRate || 0}/hr</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">You Receive</p>
+                      <p className="text-xl font-semibold">${((Number(coach.hourlyRate) || 0) * 0.9).toFixed(2)}/hr</p>
+                      <p className="text-xs text-muted-foreground">After 10% service fee</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

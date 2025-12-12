@@ -1,24 +1,12 @@
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { X, Calendar, Clock, CreditCard } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { X, Calendar, Clock, CreditCard, Loader2 } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { SelectedSlot } from "./AvailabilityCalendar";
-
-interface BookingQuote {
-  coachId: string;
-  coachName: string;
-  hourlyRate: number;
-  slots: SelectedSlot[];
-  subtotal: number;
-  serviceFee: number;
-  serviceFeePercentage: number;
-  totalAmount: number;
-  currency: string;
-}
 
 interface BookingSummaryCardProps {
   coachId: string;
@@ -39,13 +27,43 @@ export function BookingSummaryCard({
   onClearAll,
   athleteId,
 }: BookingSummaryCardProps) {
-  const quoteMutation = useMutation({
+  const { toast } = useToast();
+
+  const { data: stripeConfig } = useQuery({
+    queryKey: ["/api/stripe/config"],
+  });
+
+  const checkoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/bookings/quote", {
+      if (!athleteId) {
+        throw new Error("You must be logged in to book sessions");
+      }
+      
+      const res = await apiRequest("POST", "/api/bookings/checkout", {
+        athleteId,
         coachId,
         slotIds: selectedSlots.map(s => s.slotId),
       });
-      return (await res.json()) as BookingQuote;
+      
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not create checkout session",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Payment Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -79,6 +97,8 @@ export function BookingSummaryCard({
   if (selectedSlots.length === 0) {
     return null;
   }
+
+  const canCheckout = athleteId && selectedSlots.length > 0;
 
   return (
     <Card className="xl:sticky xl:top-4">
@@ -164,14 +184,24 @@ export function BookingSummaryCard({
       <CardFooter className="p-3 sm:p-4 pt-0 flex-col gap-2">
         <Button
           className="w-full"
-          disabled={true}
+          onClick={() => checkoutMutation.mutate()}
+          disabled={!canCheckout || checkoutMutation.isPending}
           data-testid="button-proceed-payment"
         >
-          <CreditCard className="h-4 w-4 mr-2" />
-          Proceed to Payment
+          {checkoutMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <CreditCard className="h-4 w-4 mr-2" />
+          )}
+          {checkoutMutation.isPending ? "Processing..." : "Proceed to Payment"}
         </Button>
+        {!athleteId && (
+          <p className="text-[10px] text-muted-foreground text-center leading-tight">
+            Please log in to book sessions
+          </p>
+        )}
         <p className="text-[10px] text-muted-foreground text-center leading-tight">
-          Payment integration coming soon
+          Secure payment powered by Stripe
         </p>
       </CardFooter>
     </Card>

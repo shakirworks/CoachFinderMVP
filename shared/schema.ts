@@ -28,6 +28,9 @@ export const coaches = pgTable("coaches", {
   coachingOptions: text("coaching_options").array(),
   yearsOfExperience: text("years_of_experience"),
   studentLevels: text("student_levels").array(),
+  stripeAccountId: text("stripe_account_id"),
+  stripeAccountStatus: text("stripe_account_status"),
+  stripeOnboardingComplete: text("stripe_onboarding_complete"),
 });
 
 export const messages = pgTable("messages", {

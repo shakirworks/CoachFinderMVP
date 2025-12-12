@@ -10,6 +10,7 @@ import CoachesList from "@/pages/CoachesList";
 import AthleteProfile from "@/pages/AthleteProfile";
 import CoachProfile from "@/pages/CoachProfile";
 import CoachOwnProfile from "@/pages/CoachOwnProfile";
+import BookingSuccess from "@/pages/BookingSuccess";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/profile" component={AthleteProfile} />
         <Route path="/coach-profile" component={CoachOwnProfile} />
         <Route path="/coach/:id" component={CoachProfile} />
+        <Route path="/booking/success" component={BookingSuccess} />
         <Route component={NotFound} />
       </Switch>
     </PageTransition>

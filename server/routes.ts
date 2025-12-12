@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema, paymentWebhookSchema } from "@shared/schema";
+import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 const SERVICE_FEE_PERCENTAGE = 0.10;
+const PLATFORM_FEE_PERCENTAGE = 0.10;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Check if email exists
@@ -311,7 +313,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create checkout session - creates a pending purchase
+  // Get Stripe publishable key for frontend
+  app.get("/api/stripe/config", async (req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
+      res.status(500).json({ error: "Stripe not configured" });
+    }
+  });
+
+  // Create Stripe Connect account for coach
+  app.post("/api/coaches/:coachId/stripe/connect", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+      
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      
+      // Check if coach already has a Stripe account
+      if (coach.stripeAccountId) {
+        // Create new account link for existing account
+        const accountLink = await stripe.accountLinks.create({
+          account: coach.stripeAccountId,
+          refresh_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=refresh`,
+          return_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=success`,
+          type: 'account_onboarding',
+        });
+        return res.json({ url: accountLink.url, accountId: coach.stripeAccountId });
+      }
+
+      // Create new Stripe Connect account
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'US',
+        email: coach.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual',
+        metadata: {
+          coachId: coach.id,
+          coachName: coach.name,
+        },
+      });
+
+      // Save Stripe account ID to coach
+      await storage.updateCoach(coachId, {
+        stripeAccountId: account.id,
+        stripeAccountStatus: 'pending',
+        stripeOnboardingComplete: 'false',
+      });
+
+      // Create account link for onboarding
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=refresh`,
+        return_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=success`,
+        type: 'account_onboarding',
+      });
+
+      res.json({ url: accountLink.url, accountId: account.id });
+    } catch (error: any) {
+      console.error('Stripe Connect error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get coach's Stripe account status
+  app.get("/api/coaches/:coachId/stripe/status", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+      
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+
+      if (!coach.stripeAccountId) {
+        return res.json({ 
+          connected: false, 
+          onboardingComplete: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+        });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(coach.stripeAccountId);
+
+      // Update coach record with latest status
+      const onboardingComplete = account.charges_enabled && account.payouts_enabled;
+      await storage.updateCoach(coachId, {
+        stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
+        stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
+      });
+
+      res.json({
+        connected: true,
+        onboardingComplete,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        accountId: coach.stripeAccountId,
+      });
+    } catch (error: any) {
+      console.error('Stripe status error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create Stripe login link for coach dashboard
+  app.post("/api/coaches/:coachId/stripe/dashboard", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+      
+      if (!coach || !coach.stripeAccountId) {
+        return res.status(404).json({ error: "Stripe account not found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const loginLink = await stripe.accounts.createLoginLink(coach.stripeAccountId);
+
+      res.json({ url: loginLink.url });
+    } catch (error: any) {
+      console.error('Stripe dashboard error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create Stripe Checkout session for booking
   app.post("/api/bookings/checkout", async (req, res) => {
     try {
       const validatedData = bookingCheckoutRequestSchema.parse(req.body);
@@ -323,10 +459,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Athlete not found" });
       }
       
-      // Get coach for rate
+      // Get coach for rate and Stripe account
       const coach = await storage.getCoach(coachId);
       if (!coach) {
         return res.status(404).json({ error: "Coach not found" });
+      }
+
+      // Check if coach has completed Stripe onboarding
+      if (!coach.stripeAccountId || coach.stripeOnboardingComplete !== 'true') {
+        return res.status(400).json({ 
+          error: "This coach has not completed payment setup. Please try again later." 
+        });
       }
       
       // Get slots
@@ -335,12 +478,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No valid slots found" });
       }
       
-      // Calculate pricing
+      // Calculate pricing (in cents)
       const hourlyRate = parseFloat(coach.hourlyRate || "50");
       const hourlyRateCents = Math.round(hourlyRate * 100);
       const subtotalCents = hourlyRateCents * slots.length;
       const serviceFeeCents = Math.round(subtotalCents * SERVICE_FEE_PERCENTAGE);
       const totalAmountCents = subtotalCents + serviceFeeCents;
+      const platformFeeCents = Math.round(totalAmountCents * PLATFORM_FEE_PERCENTAGE);
       
       // Create pending purchase
       const purchase = await storage.createPurchase({
@@ -351,7 +495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAmount: totalAmountCents,
         currency: "USD",
         status: "pending",
-        paymentProvider: "google_pay",
+        paymentProvider: "stripe",
         selectedSlots: slots.map(slot => ({
           slotId: slot.id,
           date: slot.date,
@@ -359,17 +503,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endTime: slot.endTime,
         })),
       });
-      
-      // In production, this would create a Google Pay session and return a token
-      // For now, we return the purchase with a placeholder session ID
+
+      // Format slot descriptions
+      const slotDescriptions = slots.map(slot => 
+        `${slot.date} ${slot.startTime}-${slot.endTime}`
+      ).join(', ');
+
+      // Create Stripe Checkout session with Connect
+      const stripe = await getUncachableStripeClient();
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `Coaching Session with ${coach.name}`,
+              description: `${slots.length} session(s): ${slotDescriptions}`,
+            },
+            unit_amount: totalAmountCents,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${req.protocol}://${req.get('host')}/booking/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchase.id}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/coach/${coachId}?booking=cancelled`,
+        payment_intent_data: {
+          application_fee_amount: platformFeeCents,
+          transfer_data: {
+            destination: coach.stripeAccountId,
+          },
+        },
+        metadata: {
+          purchaseId: purchase.id,
+          athleteId,
+          coachId,
+          slotIds: slotIds.join(','),
+        },
+        customer_email: athlete.email,
+      });
+
+      // Update purchase with session ID
+      await storage.updatePurchaseSession(purchase.id, session.id);
+
       res.json({
         purchaseId: purchase.id,
-        sessionId: `session_${purchase.id}`,
+        sessionId: session.id,
+        url: session.url,
         totalAmount: totalAmountCents,
         currency: "USD",
         status: "pending",
       });
     } catch (error: any) {
+      console.error('Checkout error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Verify checkout session and complete purchase
+  app.get("/api/bookings/verify/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const stripe = await getUncachableStripeClient();
+      
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session.payment_status === 'paid') {
+        const purchaseId = session.metadata?.purchaseId;
+        if (purchaseId) {
+          const purchase = await storage.getPurchase(purchaseId);
+          if (purchase && purchase.status === 'pending') {
+            await storage.updatePurchaseStatus(
+              purchaseId, 
+              'succeeded', 
+              session.payment_intent as string
+            );
+            
+            // Create invoice
+            const invoiceNumber = await storage.generateInvoiceNumber();
+            await storage.createInvoice({
+              purchaseId,
+              invoiceNumber,
+              paidAt: new Date(),
+              providerReceiptUrl: null,
+              metadata: { sessionId, paymentIntent: session.payment_intent },
+            });
+          }
+        }
+        
+        res.json({ 
+          success: true, 
+          status: 'paid',
+          purchaseId: session.metadata?.purchaseId,
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          status: session.payment_status,
+        });
+      }
+    } catch (error: any) {
+      console.error('Verify error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -396,72 +629,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(purchases);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Payment webhook - confirm payment status
-  // NOTE: In production, this endpoint MUST verify the payment provider's signature
-  // before processing. Google Pay webhooks should include a signature that validates
-  // the request originated from Google. This is critical for security.
-  app.post("/api/payments/webhook", async (req, res) => {
-    try {
-      const validatedData = paymentWebhookSchema.parse(req.body);
-      const { purchaseId, status, transactionId, receiptUrl, signature } = validatedData;
-      
-      // TODO: In production, verify payment provider signature here
-      // if (!verifyGooglePaySignature(signature, req.body)) {
-      //   return res.status(401).json({ error: "Invalid signature" });
-      // }
-      
-      // Verify purchase exists
-      const purchase = await storage.getPurchase(purchaseId);
-      if (!purchase) {
-        return res.status(404).json({ error: "Purchase not found" });
-      }
-      
-      // Idempotency check - don't process if already in terminal state
-      if (["succeeded", "failed", "refunded"].includes(purchase.status)) {
-        return res.json({ 
-          success: true, 
-          message: "Purchase already processed",
-          purchase 
-        });
-      }
-      
-      // Update purchase status
-      const updatedPurchase = await storage.updatePurchaseStatus(purchaseId, status, transactionId);
-      
-      // If payment succeeded, create invoice
-      if (status === "succeeded" && updatedPurchase) {
-        // Check if invoice already exists (idempotency)
-        const existingInvoice = await storage.getInvoiceByPurchase(purchaseId);
-        if (!existingInvoice) {
-          const invoiceNumber = await storage.generateInvoiceNumber();
-          const invoice = await storage.createInvoice({
-            purchaseId,
-            invoiceNumber,
-            paidAt: new Date(),
-            providerReceiptUrl: receiptUrl || null,
-            metadata: { transactionId },
-          });
-          
-          return res.json({
-            success: true,
-            purchase: updatedPurchase,
-            invoice,
-          });
-        } else {
-          return res.json({
-            success: true,
-            purchase: updatedPurchase,
-            invoice: existingInvoice,
-          });
-        }
-      }
-      
-      res.json({ success: true, purchase: updatedPurchase });
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
     }
   });
 
