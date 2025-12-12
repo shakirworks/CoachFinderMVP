@@ -328,15 +328,12 @@ export default function CoachOwnProfile() {
                         </p>
                       </div>
                       <Button
-                        onClick={() => stripeOnboardingMutation.mutate()}
-                        disabled={stripeOnboardingMutation.isPending}
+                        variant="outline"
+                        className="opacity-50 cursor-not-allowed"
+                        disabled
                         data-testid="button-continue-onboarding"
                       >
-                        {stripeOnboardingMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                        )}
+                        <ExternalLink className="h-4 w-4 mr-2" />
                         Continue Setup
                       </Button>
                     </div>
@@ -349,15 +346,12 @@ export default function CoachOwnProfile() {
                         </p>
                       </div>
                       <Button
-                        onClick={() => stripeOnboardingMutation.mutate()}
-                        disabled={stripeOnboardingMutation.isPending}
+                        variant="outline"
+                        className="opacity-50 cursor-not-allowed"
+                        disabled
                         data-testid="button-connect-stripe"
                       >
-                        {stripeOnboardingMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <CreditCard className="h-4 w-4 mr-2" />
-                        )}
+                        <CreditCard className="h-4 w-4 mr-2" />
                         Connect with Stripe
                       </Button>
                     </div>
