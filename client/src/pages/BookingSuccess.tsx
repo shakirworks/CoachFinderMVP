@@ -2,14 +2,14 @@ import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Calendar, ArrowLeft, Loader2 } from "lucide-react";
+import { CheckCircle, Calendar, ArrowLeft, Loader2, Download, FileText } from "lucide-react";
 
 interface PaymentStatus {
+  success: boolean;
   status: string;
-  purchase?: {
-    id: string;
-    status: string;
-  };
+  purchaseId?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
 }
 
 export default function BookingSuccess() {
@@ -21,6 +21,12 @@ export default function BookingSuccess() {
     queryKey: [`/api/bookings/verify/${sessionId}`],
     enabled: !!sessionId,
   });
+
+  const handleDownloadReceipt = () => {
+    if (paymentStatus?.invoiceId) {
+      window.open(`/api/invoices/${paymentStatus.invoiceId}/receipt`, '_blank');
+    }
+  };
 
   if (!sessionId) {
     return (
@@ -95,7 +101,7 @@ export default function BookingSuccess() {
             Your coaching sessions have been booked successfully. You'll receive a confirmation email shortly.
           </p>
 
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Payment Status:</span>
@@ -103,9 +109,29 @@ export default function BookingSuccess() {
                 {paymentStatus.status || "Confirmed"}
               </span>
             </div>
+            {paymentStatus.invoiceNumber && (
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Invoice:</span>
+                <span className="text-muted-foreground">
+                  {paymentStatus.invoiceNumber}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
+            {paymentStatus.invoiceId && (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleDownloadReceipt}
+                data-testid="button-download-receipt"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Receipt
+              </Button>
+            )}
             <Link href="/coaches">
               <Button className="w-full" data-testid="button-browse-more">
                 Book More Sessions
