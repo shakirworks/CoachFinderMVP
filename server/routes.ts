@@ -634,6 +634,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get coach's invoices (bookings they received)
+  app.get("/api/coaches/:coachId/invoices", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const invoices = await storage.getInvoicesByCoach(coachId);
+      res.json(invoices);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get athlete's invoices (bookings they made)
+  app.get("/api/athletes/:athleteId/invoices", async (req, res) => {
+    try {
+      const { athleteId } = req.params;
+      const invoices = await storage.getInvoicesByAthlete(athleteId);
+      res.json(invoices);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get invoice by ID
+  app.get("/api/invoices/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Download receipt as HTML (can be printed to PDF)
+  app.get("/api/invoices/:id/receipt", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      const sessionDetails = invoice.sessionDetails as Array<{
+        slotId: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+      }>;
+      
+      const formatTime = (time: string) => {
+        const [hours, minutes] = time.split(":");
+        let h = parseInt(hours);
+        const period = h >= 12 ? "PM" : "AM";
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        return `${h}:${minutes} ${period}`;
+      };
+      
+      const sessionsHtml = sessionDetails.map(session => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">${session.date}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee;">${formatTime(session.startTime)} - ${formatTime(session.endTime)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">$${(invoice.subtotal / sessionDetails.length / 100).toFixed(2)}</td>
+        </tr>
+      `).join('');
+      
+      const receiptHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Receipt - ${invoice.invoiceNumber}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; color: #333; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #8B2635; }
+    .logo { font-size: 24px; font-weight: bold; color: #8B2635; }
+    .invoice-info { text-align: right; }
+    .invoice-number { font-size: 18px; font-weight: bold; }
+    .parties { display: flex; justify-content: space-between; margin-bottom: 40px; }
+    .party { flex: 1; }
+    .party-label { font-size: 12px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    th { background: #f8f8f8; padding: 12px; text-align: left; font-weight: 600; }
+    th:last-child { text-align: right; }
+    .totals { margin-left: auto; width: 300px; }
+    .total-row { display: flex; justify-content: space-between; padding: 8px 0; }
+    .total-row.final { font-weight: bold; font-size: 18px; border-top: 2px solid #333; padding-top: 12px; }
+    .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 14px; }
+    .paid-badge { display: inline-block; background: #22c55e; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">CoachFinders</div>
+      <div style="color: #666; margin-top: 4px;">Athletic Coaching Platform</div>
+    </div>
+    <div class="invoice-info">
+      <div class="invoice-number">${invoice.invoiceNumber}</div>
+      <div style="color: #666; margin-top: 4px;">Issued: ${new Date(invoice.issuedAt).toLocaleDateString()}</div>
+      <div style="margin-top: 8px;"><span class="paid-badge">PAID</span></div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="party">
+      <div class="party-label">Billed To</div>
+      <div style="font-weight: 600;">${invoice.athleteName}</div>
+      <div style="color: #666;">${invoice.athleteEmail}</div>
+    </div>
+    <div class="party">
+      <div class="party-label">Coach</div>
+      <div style="font-weight: 600;">${invoice.coachName}</div>
+      <div style="color: #666;">${invoice.coachEmail}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Time</th>
+        <th style="text-align: right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${sessionsHtml}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="total-row">
+      <span>Subtotal</span>
+      <span>$${(invoice.subtotal / 100).toFixed(2)}</span>
+    </div>
+    <div class="total-row">
+      <span>Service Fee (10%)</span>
+      <span>$${(invoice.serviceFee / 100).toFixed(2)}</span>
+    </div>
+    <div class="total-row final">
+      <span>Total Paid</span>
+      <span>$${(invoice.totalAmount / 100).toFixed(2)} ${invoice.currency}</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Thank you for booking with CoachFinders!</p>
+    <p>Payment processed on ${invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : 'N/A'}</p>
+  </div>
+</body>
+</html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Content-Disposition', `inline; filename="receipt-${invoice.invoiceNumber}.html"`);
+      res.send(receiptHtml);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get coach's notifications
+  app.get("/api/coaches/:coachId/notifications", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const notifications = await storage.getNotificationsByRecipient(coachId, 'coach');
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get unread notification count for coach
+  app.get("/api/coaches/:coachId/notifications/unread-count", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const count = await storage.getUnreadNotificationCount(coachId, 'coach');
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationRead(id);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+      res.json(notification);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Cancel a pending purchase
   app.patch("/api/purchases/:id/cancel", async (req, res) => {
     try {
