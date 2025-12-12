@@ -574,38 +574,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       
+      const purchaseId = session.metadata?.purchaseId;
+      
       if (session.payment_status === 'paid') {
-        const purchaseId = session.metadata?.purchaseId;
         if (purchaseId) {
           const purchase = await storage.getPurchase(purchaseId);
-          if (purchase && purchase.status === 'pending') {
-            await storage.updatePurchaseStatus(
-              purchaseId, 
-              'succeeded', 
-              session.payment_intent as string
-            );
-            
-            // Create invoice
-            const invoiceNumber = await storage.generateInvoiceNumber();
-            await storage.createInvoice({
-              purchaseId,
-              invoiceNumber,
-              paidAt: new Date(),
-              providerReceiptUrl: null,
-              metadata: { sessionId, paymentIntent: session.payment_intent },
-            });
-          }
+          
+          // Get invoice for this purchase
+          const invoice = await storage.getInvoiceByPurchase(purchaseId);
+          
+          res.json({ 
+            success: true, 
+            status: 'paid',
+            purchaseId,
+            invoiceId: invoice?.id,
+            invoiceNumber: invoice?.invoiceNumber,
+          });
+        } else {
+          res.json({ 
+            success: true, 
+            status: 'paid',
+          });
         }
-        
-        res.json({ 
-          success: true, 
-          status: 'paid',
-          purchaseId: session.metadata?.purchaseId,
-        });
       } else {
         res.json({ 
           success: false, 
           status: session.payment_status,
+          purchaseId,
         });
       }
     } catch (error: any) {

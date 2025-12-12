@@ -1,4 +1,4 @@
-import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, athletes, coaches, messages, availabilitySlots, purchases, invoices } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, type Notification, type InsertNotification, athletes, coaches, messages, availabilitySlots, purchases, invoices, notifications } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -40,8 +40,17 @@ export interface IStorage {
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   getInvoiceByPurchase(purchaseId: string): Promise<Invoice | undefined>;
+  getInvoicesByCoach(coachId: string): Promise<Invoice[]>;
+  getInvoicesByAthlete(athleteId: string): Promise<Invoice[]>;
   updateInvoicePaidAt(id: string, paidAt: Date, receiptUrl?: string): Promise<Invoice | undefined>;
   generateInvoiceNumber(): Promise<string>;
+
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByRecipient(recipientId: string, recipientType: string): Promise<Notification[]>;
+  markNotificationRead(id: string): Promise<Notification | undefined>;
+  getUnreadNotificationCount(recipientId: string, recipientType: string): Promise<number>;
+
+  deleteAvailabilitySlotsByIds(slotIds: string[]): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -367,6 +376,34 @@ export class MemStorage implements IStorage {
   async generateInvoiceNumber(): Promise<string> {
     throw new Error("Not implemented - use PostgresStorage");
   }
+
+  async getInvoicesByCoach(coachId: string): Promise<Invoice[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getInvoicesByAthlete(athleteId: string): Promise<Invoice[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getNotificationsByRecipient(recipientId: string, recipientType: string): Promise<Notification[]> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getUnreadNotificationCount(recipientId: string, recipientType: string): Promise<number> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async deleteAvailabilitySlotsByIds(slotIds: string[]): Promise<void> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
 }
 
 export class PostgresStorage implements IStorage {
@@ -617,6 +654,64 @@ export class PostgresStorage implements IStorage {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `INV-${year}${month}-${random}`;
+  }
+
+  async getInvoicesByCoach(coachId: string): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.coachId, coachId))
+      .orderBy(desc(invoices.issuedAt));
+  }
+
+  async getInvoicesByAthlete(athleteId: string): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.athleteId, athleteId))
+      .orderBy(desc(invoices.issuedAt));
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const result = await db.insert(notifications).values(insertNotification).returning();
+    return result[0];
+  }
+
+  async getNotificationsByRecipient(recipientId: string, recipientType: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.recipientId, recipientId),
+        eq(notifications.recipientType, recipientType)
+      ))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    const result = await db
+      .update(notifications)
+      .set({ read: "true" })
+      .where(eq(notifications.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getUnreadNotificationCount(recipientId: string, recipientType: string): Promise<number> {
+    const result = await db
+      .select()
+      .from(notifications)
+      .where(and(
+        eq(notifications.recipientId, recipientId),
+        eq(notifications.recipientType, recipientType),
+        eq(notifications.read, "false")
+      ));
+    return result.length;
+  }
+
+  async deleteAvailabilitySlotsByIds(slotIds: string[]): Promise<void> {
+    if (slotIds.length === 0) return;
+    await db.delete(availabilitySlots).where(inArray(availabilitySlots.id, slotIds));
   }
 }
 

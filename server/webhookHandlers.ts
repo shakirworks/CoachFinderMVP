@@ -33,16 +33,46 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     return;
   }
   
+  // Update purchase status
   await storage.updatePurchaseStatus(
     purchaseId,
     'succeeded',
     session.payment_intent as string
   );
   
+  // Get athlete and coach details for invoice
+  const athlete = await storage.getAthlete(purchase.athleteId);
+  const coach = await storage.getCoach(purchase.coachId);
+  
+  if (!athlete || !coach) {
+    console.log(`Athlete or coach not found for purchase ${purchaseId}`);
+    return;
+  }
+  
+  // Parse selected slots from purchase
+  const selectedSlots = purchase.selectedSlots as Array<{
+    slotId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
+  
+  // Create invoice with full details
   const invoiceNumber = await storage.generateInvoiceNumber();
   await storage.createInvoice({
     purchaseId,
     invoiceNumber,
+    athleteId: purchase.athleteId,
+    coachId: purchase.coachId,
+    athleteName: athlete.name,
+    athleteEmail: athlete.email,
+    coachName: coach.name,
+    coachEmail: coach.email,
+    subtotal: purchase.subtotal,
+    serviceFee: purchase.serviceFee,
+    totalAmount: purchase.totalAmount,
+    currency: purchase.currency,
+    sessionDetails: selectedSlots,
     paidAt: new Date(),
     providerReceiptUrl: null,
     metadata: { 
@@ -53,6 +83,35 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     },
   });
   
+  // Block the booked slots by deleting them from availability
+  const slotIds = selectedSlots.map(slot => slot.slotId);
+  await storage.deleteAvailabilitySlotsByIds(slotIds);
+  console.log(`Blocked ${slotIds.length} slots for coach ${purchase.coachId}`);
+  
+  // Create notification for the coach
+  const sessionCount = selectedSlots.length;
+  const totalFormatted = (purchase.totalAmount / 100).toFixed(2);
+  const coachAmount = ((purchase.subtotal) / 100).toFixed(2);
+  
+  await storage.createNotification({
+    recipientId: purchase.coachId,
+    recipientType: 'coach',
+    type: 'new_booking',
+    title: 'New Booking Received!',
+    message: `${athlete.name} booked ${sessionCount} session${sessionCount > 1 ? 's' : ''} with you. You'll receive $${coachAmount} (after platform fee).`,
+    data: {
+      purchaseId,
+      athleteId: purchase.athleteId,
+      athleteName: athlete.name,
+      athleteEmail: athlete.email,
+      sessionCount,
+      totalAmount: purchase.totalAmount,
+      coachAmount: purchase.subtotal,
+      sessions: selectedSlots,
+    },
+  });
+  
+  console.log(`Created notification for coach ${purchase.coachId}`);
   console.log(`Successfully fulfilled purchase ${purchaseId} with invoice ${invoiceNumber}`);
 }
 

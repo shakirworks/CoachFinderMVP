@@ -104,10 +104,33 @@ export const invoices = pgTable("invoices", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   purchaseId: varchar("purchase_id").notNull().references(() => purchases.id),
   invoiceNumber: text("invoice_number").notNull().unique(),
+  athleteId: varchar("athlete_id").notNull().references(() => athletes.id),
+  coachId: varchar("coach_id").notNull().references(() => coaches.id),
+  athleteName: text("athlete_name").notNull(),
+  athleteEmail: text("athlete_email").notNull(),
+  coachName: text("coach_name").notNull(),
+  coachEmail: text("coach_email").notNull(),
+  subtotal: integer("subtotal").notNull(),
+  serviceFee: integer("service_fee").notNull(),
+  totalAmount: integer("total_amount").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  sessionDetails: jsonb("session_details").notNull(),
   issuedAt: timestamp("issued_at").notNull().default(sql`now()`),
   paidAt: timestamp("paid_at"),
   providerReceiptUrl: text("provider_receipt_url"),
   metadata: jsonb("metadata"),
+});
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipientId: varchar("recipient_id").notNull(),
+  recipientType: text("recipient_type").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"),
+  read: text("read").notNull().default("false"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({
@@ -127,12 +150,26 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
   id: true,
   issuedAt: true,
+}).extend({
+  sessionDetails: z.array(z.object({
+    slotId: z.string(),
+    date: z.string(),
+    startTime: z.string(),
+    endTime: z.string(),
+  })),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
 });
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export const bookingQuoteRequestSchema = z.object({
   coachId: z.string().min(1, "Coach ID is required"),
