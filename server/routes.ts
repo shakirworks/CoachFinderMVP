@@ -459,17 +459,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Athlete not found" });
       }
       
-      // Get coach for rate and Stripe account
+      // Get coach for rate
       const coach = await storage.getCoach(coachId);
       if (!coach) {
         return res.status(404).json({ error: "Coach not found" });
-      }
-
-      // Check if coach has completed Stripe onboarding
-      if (!coach.stripeAccountId || coach.stripeOnboardingComplete !== 'true') {
-        return res.status(400).json({ 
-          error: "This coach has not completed payment setup. Please try again later." 
-        });
       }
       
       // Get slots
@@ -484,7 +477,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const subtotalCents = hourlyRateCents * slots.length;
       const serviceFeeCents = Math.round(subtotalCents * SERVICE_FEE_PERCENTAGE);
       const totalAmountCents = subtotalCents + serviceFeeCents;
-      const platformFeeCents = Math.round(totalAmountCents * PLATFORM_FEE_PERCENTAGE);
       
       // Create pending purchase
       const purchase = await storage.createPurchase({
@@ -504,35 +496,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       });
 
-      // Format slot descriptions
-      const slotDescriptions = slots.map(slot => 
-        `${slot.date} ${slot.startTime}-${slot.endTime}`
-      ).join(', ');
+      // Helper function to format time for display
+      const formatTimeDisplay = (time: string): string => {
+        const [hours, minutes] = time.split(":");
+        let h = parseInt(hours);
+        const period = h >= 12 ? "PM" : "AM";
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        return `${h}:${minutes} ${period}`;
+      };
 
-      // Create Stripe Checkout session with Connect
+      // Create line items for each session slot
+      const sessionLineItems = slots.map(slot => ({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Session with ${coach.name}`,
+            description: `${slot.date} • ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`,
+          },
+          unit_amount: hourlyRateCents,
+        },
+        quantity: 1,
+      }));
+
+      // Add service fee as a separate line item
+      const serviceFeeLineItem = {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Platform Service Fee',
+            description: '10% service fee for booking facilitation',
+          },
+          unit_amount: serviceFeeCents,
+        },
+        quantity: 1,
+      };
+
+      // Create Stripe Checkout session
       const stripe = await getUncachableStripeClient();
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Coaching Session with ${coach.name}`,
-              description: `${slots.length} session(s): ${slotDescriptions}`,
-            },
-            unit_amount: totalAmountCents,
-          },
-          quantity: 1,
-        }],
+        line_items: [...sessionLineItems, serviceFeeLineItem],
         mode: 'payment',
         success_url: `${req.protocol}://${req.get('host')}/booking/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchase.id}`,
         cancel_url: `${req.protocol}://${req.get('host')}/coach/${coachId}?booking=cancelled`,
-        payment_intent_data: {
-          application_fee_amount: platformFeeCents,
-          transfer_data: {
-            destination: coach.stripeAccountId,
-          },
-        },
         metadata: {
           purchaseId: purchase.id,
           athleteId,
