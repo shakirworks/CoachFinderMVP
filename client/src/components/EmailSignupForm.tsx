@@ -12,11 +12,12 @@ interface EmailSignupFormProps {
   onBack: () => void;
   onLogin: (email: string) => void;
   isLoginPending: boolean;
+  initialIsSignIn?: boolean;
 }
 
-export default function EmailSignupForm({ role, onSubmit, onBack, onLogin, isLoginPending }: EmailSignupFormProps) {
+export default function EmailSignupForm({ role, onSubmit, onBack, onLogin, isLoginPending, initialIsSignIn = false }: EmailSignupFormProps) {
   const [email, setEmail] = useState("");
-  const [isSignIn, setIsSignIn] = useState(false);
+  const [isSignIn, setIsSignIn] = useState(initialIsSignIn);
   const [debouncedEmail, setDebouncedEmail] = useState("");
 
   useEffect(() => {

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import RoleSelectionCard from "@/components/RoleSelectionCard";
@@ -10,6 +10,9 @@ import ProgressIndicator from "@/components/ProgressIndicator";
 import type { Athlete, Coach } from "@shared/schema";
 
 export default function Landing() {
+  const searchString = useSearch();
+  const isSignInMode = new URLSearchParams(searchString).get("mode") === "signin";
+  
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<"athlete" | "coach" | null>(null);
   const [email, setEmail] = useState("");
@@ -208,10 +211,10 @@ export default function Landing() {
             <div className="space-y-8">
               <div className="text-center mb-12">
                 <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                  Join as an Athlete or Coach
+                  {isSignInMode ? "Sign In" : "Join as an Athlete or Coach"}
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Choose how you want to get started
+                  {isSignInMode ? "Select your role to continue" : "Choose how you want to get started"}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -234,6 +237,7 @@ export default function Landing() {
                 }
               }}
               isLoginPending={role === "athlete" ? loginMutation.isPending : coachLoginMutation.isPending}
+              initialIsSignIn={isSignInMode}
             />
           )}
 

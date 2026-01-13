@@ -21,7 +21,7 @@ export default function Home() {
             <span className="text-xl font-semibold">CoachFinders</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/signup">
+            <Link href="/signup?mode=signin">
               <Button variant="ghost" data-testid="button-signin">Sign In</Button>
             </Link>
             <Link href="/signup">
