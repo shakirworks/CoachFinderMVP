@@ -83,6 +83,8 @@ export default function ProfileSetupForm({
   const [studentLevels, setStudentLevels] = useState<string[]>([]);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [waiverDialogOpen, setWaiverDialogOpen] = useState(false);
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
+  const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
 
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
@@ -305,6 +307,120 @@ export default function ProfileSetupForm({
                   <p className="text-xs text-muted-foreground">
                     Allow coaches to reach out to you with training opportunities and offers
                   </p>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="privacyConsent"
+                    checked={privacyConsentAccepted}
+                    onCheckedChange={(checked) => setPrivacyConsentAccepted(checked === true)}
+                    data-testid="checkbox-privacy-consent"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="privacyConsent"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      I agree to the{" "}
+                      <Dialog open={privacyDialogOpen} onOpenChange={setPrivacyDialogOpen}>
+                        <DialogTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-primary underline font-medium inline-flex items-center hover:opacity-80"
+                            data-testid="button-view-privacy"
+                          >
+                            <FileText className="w-3 h-3 mr-1 inline" />
+                            Privacy Consent & Data Sharing Agreement
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh]">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">Privacy Consent & Data Sharing Agreement</DialogTitle>
+                            <DialogDescription>
+                              Please read this agreement carefully before proceeding
+                            </DialogDescription>
+                          </DialogHeader>
+                          <ScrollArea className="h-[50vh] pr-4">
+                            <div className="space-y-4 text-sm text-muted-foreground">
+                              <p className="font-semibold text-foreground">ATHLETE PRIVACY CONSENT AND DATA SHARING AGREEMENT</p>
+                              
+                              <p>This Privacy Consent and Data Sharing Agreement ("Agreement") is entered into by and between CoachFinders ("Platform") and the undersigned Athlete ("Athlete") as of the date of electronic acceptance.</p>
+                              
+                              <p className="font-semibold text-foreground">1. CONSENT TO COLLECT AND SHARE INFORMATION</p>
+                              <p>By creating an account on CoachFinders, you expressly consent to the collection, storage, and sharing of the following information with coaches and other users on the Platform:</p>
+                              <ul className="list-disc pl-6 space-y-1">
+                                <li>Your name and profile information</li>
+                                <li>Your location (city, region, or country)</li>
+                                <li>Your sport preferences and skill level</li>
+                                <li>Your age, gender, and other demographic information you provide</li>
+                                <li>Your contact preferences and availability</li>
+                                <li>Messages and communications with coaches</li>
+                              </ul>
+                              
+                              <p className="font-semibold text-foreground">2. PURPOSE OF DATA SHARING</p>
+                              <p>Your information is shared for the following purposes:</p>
+                              <ul className="list-disc pl-6 space-y-1">
+                                <li>To match you with suitable coaches based on your location, sport, and preferences</li>
+                                <li>To enable coaches to contact you regarding training opportunities</li>
+                                <li>To facilitate scheduling and communication between you and coaches</li>
+                                <li>To improve our services and user experience</li>
+                              </ul>
+                              
+                              <p className="font-semibold text-foreground">3. RELEASE FROM PRIVACY CLAIMS</p>
+                              <p>You hereby release, waive, and discharge CoachFinders, its officers, directors, employees, agents, and affiliates from any and all claims, demands, or causes of action arising from:</p>
+                              <ul className="list-disc pl-6 space-y-1">
+                                <li>The sharing of your information with coaches on the Platform</li>
+                                <li>Any use of your information by coaches for legitimate coaching purposes</li>
+                                <li>Any privacy concerns arising from your interactions with coaches</li>
+                                <li>Any disputes related to the handling of your personal information</li>
+                              </ul>
+                              
+                              <p className="font-semibold text-foreground">4. YOUR RESPONSIBILITIES</p>
+                              <p>You acknowledge and agree that:</p>
+                              <ul className="list-disc pl-6 space-y-1">
+                                <li>You are providing accurate and truthful information</li>
+                                <li>You are responsible for maintaining the confidentiality of your account</li>
+                                <li>You will not share sensitive personal information (such as financial details) outside of secure Platform channels</li>
+                                <li>You understand that information shared with coaches may be retained by them</li>
+                              </ul>
+                              
+                              <p className="font-semibold text-foreground">5. DATA SECURITY</p>
+                              <p>While CoachFinders implements reasonable security measures to protect your information, you acknowledge that no system is completely secure. CoachFinders is not liable for unauthorized access to your information resulting from:</p>
+                              <ul className="list-disc pl-6 space-y-1">
+                                <li>Your failure to maintain account security</li>
+                                <li>Third-party breaches beyond our reasonable control</li>
+                                <li>Information you voluntarily share outside the Platform</li>
+                              </ul>
+                              
+                              <p className="font-semibold text-foreground">6. WITHDRAWAL OF CONSENT</p>
+                              <p>You may withdraw your consent at any time by deleting your account. However, information already shared with coaches prior to account deletion may be retained by them, and CoachFinders is not responsible for retrieving such information.</p>
+                              
+                              <p className="font-semibold text-foreground">7. INDEMNIFICATION</p>
+                              <p>You agree to indemnify and hold harmless CoachFinders from any claims arising from your use of the Platform, including any disputes related to the sharing of your information with coaches.</p>
+                              
+                              <p className="font-semibold text-foreground">8. ELECTRONIC ACCEPTANCE</p>
+                              <p>By checking the agreement box and completing your profile, you acknowledge that you have read, understood, and agree to be bound by all terms and conditions of this Agreement. This electronic acceptance shall have the same legal effect as a handwritten signature.</p>
+                              
+                              <p className="mt-4 text-xs">Last Updated: January 2026</p>
+                            </div>
+                          </ScrollArea>
+                          <div className="flex justify-end pt-4 border-t">
+                            <Button 
+                              onClick={() => setPrivacyDialogOpen(false)}
+                              data-testid="button-close-privacy"
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      You must accept the privacy consent to create your athlete profile
+                    </p>
+                  </div>
                 </div>
               </div>
             </>
@@ -571,7 +687,7 @@ export default function ProfileSetupForm({
           <Button
             type="submit"
             className="w-full h-12"
-            disabled={!name || !location || !selectedSport || (role === "coach" && !waiverAccepted)}
+            disabled={!name || !location || !selectedSport || (role === "coach" && !waiverAccepted) || (role === "athlete" && !privacyConsentAccepted)}
             data-testid="button-complete-profile"
           >
             Complete Profile
