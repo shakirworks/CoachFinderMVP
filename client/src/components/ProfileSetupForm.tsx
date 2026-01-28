@@ -11,9 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import SportsChip from "./SportsChip";
-import { Camera, MapPin, User, DollarSign } from "lucide-react";
+import { Camera, MapPin, User, DollarSign, FileText } from "lucide-react";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
@@ -72,6 +81,8 @@ export default function ProfileSetupForm({
   const [coachingOptions, setCoachingOptions] = useState<string[]>([]);
   const [yearsOfExperience, setYearsOfExperience] = useState("");
   const [studentLevels, setStudentLevels] = useState<string[]>([]);
+  const [waiverAccepted, setWaiverAccepted] = useState(false);
+  const [waiverDialogOpen, setWaiverDialogOpen] = useState(false);
 
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
@@ -461,11 +472,106 @@ export default function ProfileSetupForm({
           )}
         </div>
 
+        {role === "coach" && (
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="waiver"
+                checked={waiverAccepted}
+                onCheckedChange={(checked) => setWaiverAccepted(checked === true)}
+                data-testid="checkbox-waiver"
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="waiver"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  I agree to the{" "}
+                  <Dialog open={waiverDialogOpen} onOpenChange={setWaiverDialogOpen}>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-primary underline font-medium inline-flex items-center hover:opacity-80"
+                        data-testid="button-view-waiver"
+                      >
+                        <FileText className="w-3 h-3 mr-1 inline" />
+                        Liability Waiver
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[80vh]">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl">CoachFinders Liability Waiver & Release Agreement</DialogTitle>
+                        <DialogDescription>
+                          Please read this agreement carefully before proceeding
+                        </DialogDescription>
+                      </DialogHeader>
+                      <ScrollArea className="h-[50vh] pr-4">
+                        <div className="space-y-4 text-sm text-muted-foreground">
+                          <p className="font-semibold text-foreground">COACH LIABILITY WAIVER AND RELEASE OF CLAIMS</p>
+                          
+                          <p>This Liability Waiver and Release Agreement ("Agreement") is entered into by and between CoachFinders ("Platform") and the undersigned Coach ("Coach") as of the date of electronic acceptance.</p>
+                          
+                          <p className="font-semibold text-foreground">1. ACKNOWLEDGMENT OF INDEPENDENT CONTRACTOR STATUS</p>
+                          <p>Coach acknowledges and agrees that they are an independent contractor and not an employee, agent, or representative of CoachFinders. Coach is solely responsible for their own actions, conduct, and the services they provide to clients obtained through the Platform.</p>
+                          
+                          <p className="font-semibold text-foreground">2. RELEASE OF LIABILITY</p>
+                          <p>Coach hereby releases, waives, discharges, and covenants not to sue CoachFinders, its officers, directors, employees, agents, and affiliates from any and all liability, claims, demands, actions, and causes of action arising out of or related to:</p>
+                          <ul className="list-disc pl-6 space-y-1">
+                            <li>Any coaching services provided by Coach to clients</li>
+                            <li>Any disputes, conflicts, or disagreements between Coach and clients</li>
+                            <li>Any injuries, damages, or losses sustained by clients during coaching sessions</li>
+                            <li>Any allegations of misconduct, negligence, or malpractice against Coach</li>
+                            <li>Any financial disputes or payment issues between Coach and clients</li>
+                          </ul>
+                          
+                          <p className="font-semibold text-foreground">3. INDEMNIFICATION</p>
+                          <p>Coach agrees to indemnify, defend, and hold harmless CoachFinders from and against any and all claims, liabilities, damages, losses, costs, and expenses (including reasonable attorneys' fees) arising out of or in connection with Coach's use of the Platform, Coach's coaching services, or any breach of this Agreement.</p>
+                          
+                          <p className="font-semibold text-foreground">4. ASSUMPTION OF RISK</p>
+                          <p>Coach acknowledges that athletic coaching involves inherent risks and assumes full responsibility for ensuring safe practices, proper instruction, and appropriate safety measures during all coaching activities.</p>
+                          
+                          <p className="font-semibold text-foreground">5. PROFESSIONAL STANDARDS</p>
+                          <p>Coach agrees to maintain appropriate professional certifications, insurance coverage, and conduct all coaching activities in accordance with applicable laws, regulations, and industry standards.</p>
+                          
+                          <p className="font-semibold text-foreground">6. NO WARRANTY BY PLATFORM</p>
+                          <p>CoachFinders makes no representations or warranties regarding the suitability, qualifications, or background of any clients. Coach is solely responsible for vetting clients and determining the appropriateness of any coaching relationship.</p>
+                          
+                          <p className="font-semibold text-foreground">7. DISPUTE RESOLUTION</p>
+                          <p>Any disputes between Coach and clients shall be resolved directly between those parties. CoachFinders is not responsible for mediating, arbitrating, or resolving any such disputes.</p>
+                          
+                          <p className="font-semibold text-foreground">8. SEVERABILITY</p>
+                          <p>If any provision of this Agreement is found to be unenforceable, the remaining provisions shall continue in full force and effect.</p>
+                          
+                          <p className="font-semibold text-foreground">9. ELECTRONIC ACCEPTANCE</p>
+                          <p>By checking the agreement box and completing your profile, you acknowledge that you have read, understood, and agree to be bound by all terms and conditions of this Agreement. This electronic acceptance shall have the same legal effect as a handwritten signature.</p>
+                          
+                          <p className="mt-4 text-xs">Last Updated: January 2026</p>
+                        </div>
+                      </ScrollArea>
+                      <div className="flex justify-end pt-4 border-t">
+                        <Button 
+                          onClick={() => setWaiverDialogOpen(false)}
+                          data-testid="button-close-waiver"
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  You must accept the liability waiver to create your coach profile
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3 pt-4">
           <Button
             type="submit"
             className="w-full h-12"
-            disabled={!name || !location || !selectedSport}
+            disabled={!name || !location || !selectedSport || (role === "coach" && !waiverAccepted)}
             data-testid="button-complete-profile"
           >
             Complete Profile
