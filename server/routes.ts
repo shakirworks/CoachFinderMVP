@@ -858,6 +858,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get notifications for athlete
+  app.get("/api/athletes/:athleteId/notifications", async (req, res) => {
+    try {
+      const { athleteId } = req.params;
+      const notifications = await storage.getNotificationsByRecipient(athleteId, 'athlete');
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get unread notification count for coach
   app.get("/api/coaches/:coachId/notifications/unread-count", async (req, res) => {
     try {

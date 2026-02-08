@@ -36,6 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import ChatWindow from "@/components/ChatWindow";
+import MessageNotificationListener from "@/components/MessageNotificationListener";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar } from "lucide-react";
@@ -276,6 +277,8 @@ export default function CoachOwnProfile() {
           </DropdownMenu>
         </div>
       </header>
+
+      {coach && <MessageNotificationListener recipientId={coach.id} recipientType="coach" />}
 
       <div className="max-w-5xl mx-auto p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
