@@ -194,6 +194,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageData = insertMessageSchema.parse(req.body);
       const message = await storage.createMessage(messageData);
+
+      if (messageData.senderType === "athlete") {
+        const athlete = await storage.getAthlete(messageData.athleteId);
+        if (athlete) {
+          await storage.createNotification({
+            recipientId: messageData.coachId,
+            recipientType: "coach",
+            type: "new_message",
+            title: "New Message",
+            message: `${athlete.name} sent you a message: "${messageData.message.substring(0, 80)}${messageData.message.length > 80 ? '...' : ''}"`,
+            data: {
+              athleteId: messageData.athleteId,
+              athleteName: athlete.name,
+              coachId: messageData.coachId,
+            },
+            read: "false",
+          });
+        }
+      } else if (messageData.senderType === "coach") {
+        const coach = await storage.getCoach(messageData.coachId);
+        if (coach) {
+          await storage.createNotification({
+            recipientId: messageData.athleteId,
+            recipientType: "athlete",
+            type: "new_message",
+            title: "New Message",
+            message: `Coach ${coach.name} sent you a message: "${messageData.message.substring(0, 80)}${messageData.message.length > 80 ? '...' : ''}"`,
+            data: {
+              athleteId: messageData.athleteId,
+              coachId: messageData.coachId,
+              coachName: coach.name,
+            },
+            read: "false",
+          });
+        }
+      }
+
       res.json(message);
     } catch (error: any) {
       res.status(400).json({ error: error.message });

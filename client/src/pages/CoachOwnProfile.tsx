@@ -171,6 +171,7 @@ export default function CoachOwnProfile() {
       return res.json();
     },
     enabled: !!coach?.id,
+    refetchInterval: 10000,
   });
 
   // Fetch coach's message threads
@@ -182,7 +183,10 @@ export default function CoachOwnProfile() {
       return res.json();
     },
     enabled: !!coach?.id,
+    refetchInterval: 10000,
   });
+
+  const unreadMessageCount = messageThreads.reduce((sum, t) => sum + t.unreadCount, 0);
 
   const handleLogout = () => {
     localStorage.removeItem("currentCoach");
@@ -277,7 +281,14 @@ export default function CoachOwnProfile() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="availability" data-testid="tab-availability">Availability</TabsTrigger>
-            <TabsTrigger value="messages" data-testid="tab-messages">Messages</TabsTrigger>
+            <TabsTrigger value="messages" data-testid="tab-messages" className="relative">
+              Messages
+              {unreadMessageCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1" data-testid="badge-unread-messages">
+                  {unreadMessageCount}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="payments" data-testid="tab-payments">Payments</TabsTrigger>
             <TabsTrigger value="edit" data-testid="tab-edit">Edit</TabsTrigger>
           </TabsList>
