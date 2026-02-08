@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -173,6 +173,17 @@ export default function CoachOwnProfile() {
     enabled: !!coach?.id,
   });
 
+  // Fetch coach's message threads
+  const { data: messageThreads = [], isLoading: messagesLoading } = useQuery<Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>>({
+    queryKey: ['/api/coaches', coach?.id, 'messages'],
+    queryFn: async () => {
+      if (!coach?.id) return [];
+      const res = await fetch(`/api/coaches/${coach.id}/messages`);
+      return res.json();
+    },
+    enabled: !!coach?.id,
+  });
+
   const handleLogout = () => {
     localStorage.removeItem("currentCoach");
     setLocation("/");
@@ -281,15 +292,67 @@ export default function CoachOwnProfile() {
                 <CardTitle className="text-xl sm:text-2xl">My Messages</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No messages yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Athletes will be able to message you about coaching opportunities
-                  </p>
-                </div>
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : messageThreads.length > 0 ? (
+                  <div className="space-y-2">
+                    {messageThreads.map((thread) => (
+                      <div
+                        key={thread.athlete.id}
+                        className="flex items-center gap-3 p-3 rounded-lg hover-elevate cursor-pointer"
+                        onClick={() => {
+                          setSelectedAthlete(thread.athlete);
+                          setIsChatOpen(true);
+                        }}
+                        data-testid={`message-thread-${thread.athlete.id}`}
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage
+                            src={thread.athlete.profileImage || athleteImage}
+                            alt={thread.athlete.name}
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {thread.athlete.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium truncate">{thread.athlete.name}</p>
+                            <p className="text-xs text-muted-foreground flex-shrink-0">
+                              {formatDistanceToNow(new Date(thread.lastMessage.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {thread.lastMessage.senderType === "coach" ? "You: " : ""}{thread.lastMessage.message}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No messages yet</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Athletes will be able to message you about coaching opportunities
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
+
+            {selectedAthlete && coach && (
+              <ChatWindow
+                open={isChatOpen}
+                onOpenChange={setIsChatOpen}
+                coach={coach}
+                athlete={selectedAthlete}
+                senderType="coach"
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="payments">

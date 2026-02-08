@@ -22,6 +22,7 @@ interface ChatWindowProps {
   onOpenChange: (open: boolean) => void;
   coach: Coach;
   athlete: Athlete;
+  senderType?: "athlete" | "coach";
 }
 
 export default function ChatWindow({
@@ -29,14 +30,21 @@ export default function ChatWindow({
   onOpenChange,
   coach,
   athlete,
+  senderType = "athlete",
 }: ChatWindowProps) {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: messages, isLoading } = useQuery<Message[]>({
-    queryKey: [`/api/messages/${athlete.id}/${coach.id}`],
+    queryKey: ['/api/messages', athlete.id, coach.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/messages/${athlete.id}/${coach.id}`);
+      if (!res.ok) throw new Error('Failed to fetch messages');
+      return res.json();
+    },
     enabled: open,
+    refetchInterval: open ? 3000 : false,
   });
 
   const sendMessageMutation = useMutation({
@@ -45,13 +53,14 @@ export default function ChatWindow({
         athleteId: athlete.id,
         coachId: coach.id,
         message: messageText,
-        senderType: "athlete",
+        senderType,
       });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/messages/${athlete.id}/${coach.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/messages', athlete.id, coach.id] });
       queryClient.invalidateQueries({ queryKey: [`/api/athletes/${athlete.id}/messages`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/coaches', coach.id, 'messages'] });
       setMessage("");
     },
     onError: (error: Error) => {
@@ -88,17 +97,19 @@ export default function ChatWindow({
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
               <AvatarImage
-                src={coach.profileImage || coachImage}
-                alt={coach.name}
+                src={senderType === "coach" ? (athlete.profileImage || coachImage) : (coach.profileImage || coachImage)}
+                alt={senderType === "coach" ? athlete.name : coach.name}
                 className="object-cover"
               />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {coach.name.split(' ').map(n => n[0]).join('')}
+                {(senderType === "coach" ? athlete.name : coach.name).split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div>
-              <DialogTitle className="text-lg">{coach.name}</DialogTitle>
-              <p className="text-sm text-muted-foreground">{coach.sport} Coach</p>
+              <DialogTitle className="text-lg">{senderType === "coach" ? athlete.name : coach.name}</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                {senderType === "coach" ? `${athlete.sport} Athlete` : `${coach.sport} Coach`}
+              </p>
             </div>
           </div>
         </DialogHeader>
@@ -110,28 +121,31 @@ export default function ChatWindow({
             </div>
           ) : messages && messages.length > 0 ? (
             <div className="space-y-4 py-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderType === "athlete" ? "justify-end" : "justify-start"}`}
-                  data-testid={`message-${msg.id}`}
-                >
+              {messages.map((msg) => {
+                const isOwnMessage = msg.senderType === senderType;
+                return (
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      msg.senderType === "athlete"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
+                    key={msg.id}
+                    className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                    data-testid={`message-${msg.id}`}
                   >
-                    <p className="text-sm">{msg.message}</p>
-                    <p className={`text-xs mt-1 ${
-                      msg.senderType === "athlete" ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}>
-                      {format(new Date(msg.createdAt), "h:mm a")}
-                    </p>
+                    <div
+                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                        isOwnMessage
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <p className="text-sm">{msg.message}</p>
+                      <p className={`text-xs mt-1 ${
+                        isOwnMessage ? "text-primary-foreground/70" : "text-muted-foreground"
+                      }`}>
+                        {format(new Date(msg.createdAt), "h:mm a")}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">

@@ -23,6 +23,7 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   getMessageThread(athleteId: string, coachId: string): Promise<Message[]>;
   getAthleteMessageThreads(athleteId: string): Promise<Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>>;
+  getCoachMessageThreads(coachId: string): Promise<Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>>;
 
   createAvailabilitySlot(slot: InsertAvailabilitySlot): Promise<AvailabilitySlot>;
   getCoachAvailability(coachId: string): Promise<AvailabilitySlot[]>;
@@ -318,6 +319,30 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getCoachMessageThreads(coachId: string): Promise<Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>> {
+    const coachMessages = this.messages.filter(m => m.coachId === coachId);
+    const athleteIdsSet = new Set(coachMessages.map(m => m.athleteId));
+    const athleteIds = Array.from(athleteIdsSet);
+    
+    const threads = athleteIds.map(athleteId => {
+      const athlete = this.athletes.get(athleteId);
+      if (!athlete) return null;
+      
+      const threadMessages = coachMessages.filter(m => m.athleteId === athleteId);
+      const lastMessage = threadMessages[threadMessages.length - 1];
+      
+      return {
+        athlete,
+        lastMessage,
+        unreadCount: 0,
+      };
+    }).filter(Boolean) as Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>;
+    
+    return threads.sort((a, b) => 
+      b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
+    );
+  }
+
   async createAvailabilitySlot(slot: InsertAvailabilitySlot): Promise<AvailabilitySlot> {
     throw new Error("Not implemented - use PostgresStorage");
   }
@@ -531,6 +556,35 @@ export class PostgresStorage implements IStorage {
     );
 
     return threads.filter(Boolean) as Array<{ coach: Coach; lastMessage: Message; unreadCount: number }>;
+  }
+
+  async getCoachMessageThreads(coachId: string): Promise<Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>> {
+    const coachMessages = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.coachId, coachId))
+      .orderBy(desc(messages.createdAt));
+
+    const athleteIdsSet = new Set(coachMessages.map(m => m.athleteId));
+    const athleteIds = Array.from(athleteIdsSet);
+
+    const threads = await Promise.all(
+      athleteIds.map(async (athleteId) => {
+        const athlete = await this.getAthlete(athleteId);
+        if (!athlete) return null;
+
+        const threadMessages = coachMessages.filter(m => m.athleteId === athleteId);
+        const lastMessage = threadMessages[0];
+
+        return {
+          athlete,
+          lastMessage,
+          unreadCount: 0,
+        };
+      })
+    );
+
+    return threads.filter(Boolean) as Array<{ athlete: Athlete; lastMessage: Message; unreadCount: number }>;
   }
 
   async createAvailabilitySlot(insertSlot: InsertAvailabilitySlot): Promise<AvailabilitySlot> {

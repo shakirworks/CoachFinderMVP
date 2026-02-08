@@ -222,6 +222,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all message threads for a coach
+  app.get("/api/coaches/:coachId/messages", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const threads = await storage.getCoachMessageThreads(coachId);
+      res.json(threads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create availability slot
   app.post("/api/availability", async (req, res) => {
     try {
