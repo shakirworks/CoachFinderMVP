@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import SiteFooter from "@/components/SiteFooter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -345,6 +346,8 @@ export default function CoachesList() {
           athlete={athlete}
         />
       )}
+
+      <SiteFooter />
     </div>
   );
 }

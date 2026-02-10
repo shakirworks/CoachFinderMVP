@@ -1,26 +1,33 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Target, Calendar, MessageSquare, TrendingUp, Users, Award } from "lucide-react";
+import { Target, Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe } from "lucide-react";
 import heroImage from "@assets/stock_images/professional_sports__e977efaa.jpg";
 import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
-  const scrollToFeatures = () => {
-    const featuresSection = document.getElementById("features");
-    featuresSection?.scrollIntoView({ behavior: "smooth" });
+  const scrollToSection = (id: string) => {
+    const section = document.getElementById(id);
+    section?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="container flex h-16 items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <Target className="h-6 w-6 text-primary" />
             <span className="text-xl font-semibold">CoachFinders</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Button variant="ghost" onClick={() => scrollToSection("about")} data-testid="button-about-nav">
+              About Us
+            </Button>
+            <Button variant="ghost" onClick={() => scrollToSection("feedback")} data-testid="button-feedback-nav">
+              Feedback
+            </Button>
             <Link href="/signup?mode=signin">
               <Button variant="ghost" data-testid="button-signin">Sign In</Button>
             </Link>
@@ -65,7 +72,7 @@ export default function Home() {
               size="lg" 
               variant="outline" 
               className="rounded-full backdrop-blur-sm bg-white/10 border-white/30 text-white"
-              onClick={scrollToFeatures}
+              onClick={() => scrollToSection("features")}
               data-testid="button-learnmore"
             >
               Learn More
@@ -211,6 +218,106 @@ export default function Home() {
         </div>
       </section>
 
+      <section id="about" className="py-20 md:py-24">
+        <div className="container px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4" data-testid="heading-about">
+              About Us
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              We believe every athlete deserves access to world-class coaching
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto space-y-8">
+            <p className="text-lg text-muted-foreground leading-relaxed text-center" data-testid="text-about-intro">
+              CoachFinders was built with a simple mission: to break down the barriers between athletes and the coaches
+              who can help them reach their full potential. Whether you're picking up a sport for the first time or training
+              for elite competition, the right coach makes all the difference.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 mx-auto">
+                    <Heart className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-3">Our Mission</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    To make quality sports coaching accessible to everyone, everywhere. We connect passionate athletes
+                    with experienced coaches who share their dedication.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 mx-auto">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-3">Trust & Safety</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Every coach on our platform is verified. We prioritize a safe, professional environment
+                    with secure payments and transparent profiles.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 mx-auto">
+                    <Globe className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-3">Growing Community</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    We're building a thriving community of athletes and coaches across multiple sports,
+                    from tennis and soccer to swimming and track.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="feedback" className="py-20 md:py-24 bg-muted/30">
+        <div className="container px-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-4" data-testid="heading-feedback">
+              Send Us Feedback
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              We're always looking to improve. Your feedback helps us build a better platform for athletes and coaches alike.
+            </p>
+
+            <Card className="shadow-sm">
+              <CardContent className="p-8 space-y-6">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-4">
+                    Have a suggestion, question, or just want to say hello? We'd love to hear from you.
+                    Reach out to our support team and we'll get back to you as soon as possible.
+                  </p>
+                  <a
+                    href="mailto:support@coachfinders.ca"
+                    data-testid="link-feedback-email"
+                  >
+                    <Button size="lg" className="rounded-full">
+                      <Mail className="h-4 w-4 mr-2" />
+                      support@coachfinders.ca
+                    </Button>
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       <section className="py-20 md:py-32 bg-primary text-primary-foreground">
         <div className="container px-6 text-center">
           <h2 className="text-3xl md:text-5xl font-light tracking-tight mb-6">
@@ -232,19 +339,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t py-12">
-        <div className="container px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              <span className="font-semibold">CoachFinders</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2024 CoachFinders. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

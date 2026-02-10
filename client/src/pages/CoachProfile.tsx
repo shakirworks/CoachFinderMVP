@@ -11,6 +11,7 @@ import { BookingSummaryCard } from "@/components/BookingSummaryCard";
 import { MapPin, Mail, ArrowLeft, MessageCircle, DollarSign } from "lucide-react";
 import type { Coach, Athlete } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function CoachProfile() {
   const [, params] = useRoute("/coach/:id");
@@ -258,6 +259,8 @@ export default function CoachProfile() {
           athlete={athlete}
         />
       )}
+
+      <SiteFooter />
     </div>
   );
 }
