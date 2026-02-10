@@ -54,7 +54,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         used: "false",
       });
 
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const forwardedProto = req.get("x-forwarded-proto") || req.protocol;
+      const forwardedHost = req.get("x-forwarded-host") || req.get("host");
+      const origin = req.get("origin");
+      const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
       const verificationLink = `${baseUrl}/verify-email?token=${token}`;
 
       try {

@@ -60,7 +60,10 @@ export async function sendWelcomeVerification(
 ): Promise<void> {
   const roleLabel = role === "athlete" ? "Athlete" : "Coach";
 
-  await transporter.sendMail({
+  console.log(`[Email] Sending welcome verification to: ${to}, link: ${verificationLink}`);
+  console.log(`[Email] SMTP config - host: ${process.env.SMTP_HOST}, port: ${process.env.SMTP_PORT}, user: ${process.env.SMTP_USER}`);
+
+  const result = await transporter.sendMail({
     from: `"CoachFinders" <${process.env.SMTP_USER || "support@coachfinders.ca"}>`,
     to,
     subject: "Welcome to CoachFinders - Verify Your Email",
@@ -100,4 +103,6 @@ export async function sendWelcomeVerification(
     `,
     text: `Welcome to CoachFinders!\n\nThank you for signing up as ${role === "athlete" ? "an" : "a"} ${roleLabel}. Please verify your email by visiting: ${verificationLink}\n\nThis link expires in 24 hours. If you did not create an account, you can safely ignore this email.\n\n- CoachFinders Team`,
   });
+
+  console.log(`[Email] Welcome verification sent successfully to: ${to}, messageId: ${result.messageId}, response: ${result.response}`);
 }
