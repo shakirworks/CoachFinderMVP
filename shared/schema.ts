@@ -9,6 +9,7 @@ export const athletes = pgTable("athletes", {
   sport: text("sport").notNull(),
   location: text("location").notNull(),
   email: text("email").notNull().unique(),
+  password: text("password").notNull(),
   profileImage: text("profile_image"),
   availableForCoachRequests: text("available_for_coach_requests").default("false"),
   gender: text("gender"),
@@ -23,6 +24,7 @@ export const coaches = pgTable("coaches", {
   sport: text("sport").notNull(),
   location: text("location").notNull(),
   email: text("email").notNull().unique(),
+  password: text("password").notNull(),
   profileImage: text("profile_image"),
   certification: text("certification"),
   performanceLevel: text("performance_level"),
@@ -126,6 +128,16 @@ export const invoices = pgTable("invoices", {
   metadata: jsonb("metadata"),
 });
 
+export const verificationCodes = pgTable("verification_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  code: text("code").notNull(),
+  role: text("role").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: text("used").notNull().default("false"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   recipientId: varchar("recipient_id").notNull(),
@@ -163,6 +175,14 @@ export const insertInvoiceSchema = createInsertSchema(invoices).omit({
     endTime: z.string(),
   })),
 });
+
+export const insertVerificationCodeSchema = createInsertSchema(verificationCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertVerificationCode = z.infer<typeof insertVerificationCodeSchema>;
+export type VerificationCode = typeof verificationCodes.$inferSelect;
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,

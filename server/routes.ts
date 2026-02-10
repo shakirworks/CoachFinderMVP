@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import bcrypt from "bcryptjs";
+import { sendVerificationCode } from "./email";
 
 const SERVICE_FEE_PERCENTAGE = 0.10;
 const PLATFORM_FEE_PERCENTAGE = 0.10;
@@ -26,8 +28,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/athletes", async (req, res) => {
     try {
       const athleteData = insertAthleteSchema.parse(req.body);
-      const athlete = await storage.createAthlete(athleteData);
-      res.json(athlete);
+      const hashedPassword = await bcrypt.hash(athleteData.password, 10);
+      const athlete = await storage.createAthlete({ ...athleteData, password: hashedPassword });
+      const { password: _, ...safeAthlete } = athlete;
+      res.json(safeAthlete);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -37,7 +41,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/athletes", async (req, res) => {
     try {
       const athletes = await storage.getAllAthletes();
-      res.json(athletes);
+      const safeAthletes = athletes.map(({ password: _, ...a }) => a);
+      res.json(safeAthletes);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -54,7 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Athlete not found" });
       }
       
-      res.json(athlete);
+      const { password: _, ...safeAthlete } = athlete;
+      res.json(safeAthlete);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -80,7 +86,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const coachData = insertCoachSchema.parse(req.body);
       
-      // Check if coach with this email already exists
       const existingCoach = await storage.getCoachByEmail(coachData.email);
       if (existingCoach) {
         return res.status(409).json({ 
@@ -88,8 +93,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const coach = await storage.createCoach(coachData);
-      res.json(coach);
+      const hashedPassword = await bcrypt.hash(coachData.password, 10);
+      const coach = await storage.createCoach({ ...coachData, password: hashedPassword });
+      const { password: _, ...safeCoach } = coach;
+      res.json(safeCoach);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -99,45 +106,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/coaches", async (req, res) => {
     try {
       const coaches = await storage.getAllCoaches();
-      res.json(coaches);
+      const safeCoaches = coaches.map(({ password: _, ...c }) => c);
+      res.json(safeCoaches);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Login - check if athlete email exists
+  // Login step 1: verify email + password, send verification code
   app.post("/api/login", async (req, res) => {
     try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
       }
       
       const athlete = await storage.getAthleteByEmail(email);
       if (!athlete) {
         return res.status(404).json({ error: "User not found" });
       }
-      
-      res.json(athlete);
+
+      const passwordMatch = await bcrypt.compare(password, athlete.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+
+      const code = String(Math.floor(10000 + Math.random() * 90000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.createVerificationCode({
+        email,
+        code,
+        role: "athlete",
+        expiresAt,
+        used: "false",
+      });
+
+      try {
+        await sendVerificationCode(email, code, "athlete");
+      } catch (emailError: any) {
+        console.error("Failed to send verification email:", emailError.message);
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+      }
+
+      res.json({ success: true, message: "Verification code sent to your email" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Coach login - check if coach email exists
+  // Login step 1 for coach: verify email + password, send verification code
   app.post("/api/login/coach", async (req, res) => {
     try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
       }
       
       const coach = await storage.getCoachByEmail(email);
       if (!coach) {
         return res.status(404).json({ error: "Coach not found" });
       }
-      
-      res.json(coach);
+
+      const passwordMatch = await bcrypt.compare(password, coach.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+
+      const code = String(Math.floor(10000 + Math.random() * 90000));
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.createVerificationCode({
+        email,
+        code,
+        role: "coach",
+        expiresAt,
+        used: "false",
+      });
+
+      try {
+        await sendVerificationCode(email, code, "coach");
+      } catch (emailError: any) {
+        console.error("Failed to send verification email:", emailError.message);
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+      }
+
+      res.json({ success: true, message: "Verification code sent to your email" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Login step 2: verify the 5-digit code for athlete
+  app.post("/api/login/verify", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const verificationCode = await storage.getVerificationCode(email, code, "athlete");
+      if (!verificationCode) {
+        return res.status(401).json({ error: "Invalid or expired verification code" });
+      }
+
+      if (new Date() > verificationCode.expiresAt) {
+        return res.status(401).json({ error: "Verification code has expired" });
+      }
+
+      await storage.markVerificationCodeUsed(verificationCode.id);
+
+      const athlete = await storage.getAthleteByEmail(email);
+      if (!athlete) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...safeAthlete } = athlete;
+      res.json(safeAthlete);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Login step 2: verify the 5-digit code for coach
+  app.post("/api/login/coach/verify", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email and verification code are required" });
+      }
+
+      const verificationCode = await storage.getVerificationCode(email, code, "coach");
+      if (!verificationCode) {
+        return res.status(401).json({ error: "Invalid or expired verification code" });
+      }
+
+      if (new Date() > verificationCode.expiresAt) {
+        return res.status(401).json({ error: "Verification code has expired" });
+      }
+
+      await storage.markVerificationCodeUsed(verificationCode.id);
+
+      const coach = await storage.getCoachByEmail(email);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+
+      const { password: _, ...safeCoach } = coach;
+      res.json(safeCoach);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -151,7 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!coach) {
         return res.status(404).json({ error: "Coach not found" });
       }
-      res.json(coach);
+      const { password: _, ...safeCoach } = coach;
+      res.json(safeCoach);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

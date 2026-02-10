@@ -1,7 +1,8 @@
-import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, type Notification, type InsertNotification, athletes, coaches, messages, availabilitySlots, purchases, invoices, notifications } from "@shared/schema";
+import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, type Notification, type InsertNotification, type VerificationCode, type InsertVerificationCode, athletes, coaches, messages, availabilitySlots, purchases, invoices, notifications, verificationCodes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, and, desc, inArray } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
   getAthlete(id: string): Promise<Athlete | undefined>;
@@ -52,6 +53,11 @@ export interface IStorage {
   getUnreadNotificationCount(recipientId: string, recipientType: string): Promise<number>;
 
   deleteAvailabilitySlotsByIds(slotIds: string[]): Promise<void>;
+
+  createVerificationCode(code: InsertVerificationCode): Promise<VerificationCode>;
+  getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined>;
+  markVerificationCodeUsed(id: string): Promise<void>;
+  deleteExpiredVerificationCodes(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -165,6 +171,7 @@ export class MemStorage implements IStorage {
       sport: insertAthlete.sport,
       location: insertAthlete.location,
       email: insertAthlete.email,
+      password: insertAthlete.password,
       profileImage: insertAthlete.profileImage ?? null,
       availableForCoachRequests: insertAthlete.availableForCoachRequests ?? "false",
       gender: insertAthlete.gender ?? null,
@@ -220,6 +227,7 @@ export class MemStorage implements IStorage {
       sport: insertCoach.sport,
       location: insertCoach.location,
       email: insertCoach.email,
+      password: insertCoach.password,
       profileImage: insertCoach.profileImage ?? null,
       certification: insertCoach.certification ?? null,
       performanceLevel: insertCoach.performanceLevel ?? null,
@@ -432,6 +440,22 @@ export class MemStorage implements IStorage {
   }
 
   async deleteAvailabilitySlotsByIds(slotIds: string[]): Promise<void> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async createVerificationCode(code: InsertVerificationCode): Promise<VerificationCode> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async markVerificationCodeUsed(id: string): Promise<void> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async deleteExpiredVerificationCodes(): Promise<void> {
     throw new Error("Not implemented - use PostgresStorage");
   }
 }
@@ -772,6 +796,43 @@ export class PostgresStorage implements IStorage {
     if (slotIds.length === 0) return;
     await db.delete(availabilitySlots).where(inArray(availabilitySlots.id, slotIds));
   }
+
+  async createVerificationCode(insertCode: InsertVerificationCode): Promise<VerificationCode> {
+    const result = await db.insert(verificationCodes).values(insertCode).returning();
+    return result[0];
+  }
+
+  async getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined> {
+    const result = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.email, email),
+          eq(verificationCodes.code, code),
+          eq(verificationCodes.role, role),
+          eq(verificationCodes.used, "false")
+        )
+      )
+      .orderBy(desc(verificationCodes.createdAt));
+    return result[0];
+  }
+
+  async markVerificationCodeUsed(id: string): Promise<void> {
+    await db
+      .update(verificationCodes)
+      .set({ used: "true" })
+      .where(eq(verificationCodes.id, id));
+  }
+
+  async deleteExpiredVerificationCodes(): Promise<void> {
+    const now = new Date();
+    await db.delete(verificationCodes).where(
+      and(
+        eq(verificationCodes.used, "true")
+      )
+    );
+  }
 }
 
 async function initializeDummyData() {
@@ -826,6 +887,7 @@ async function initializeDummyData() {
   const experienceYears = ["2", "5", "8", "10", "15"];
 
   const createdCoaches: { id: string }[] = [];
+  const demoPasswordHash = await bcrypt.hash("demo123", 10);
   
   for (let i = 0; i < coachesData.length; i++) {
     const coach = coachesData[i];
@@ -834,6 +896,7 @@ async function initializeDummyData() {
       sport: coach.sport,
       location: coach.location,
       email: coach.email,
+      password: demoPasswordHash,
       hourlyRate: hourlyRates[i % hourlyRates.length],
       coachingOptions: coachingOptionsOptions[i % coachingOptionsOptions.length],
       yearsOfExperience: experienceYears[i % experienceYears.length],

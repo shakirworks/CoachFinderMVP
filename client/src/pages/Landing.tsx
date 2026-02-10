@@ -16,6 +16,9 @@ export default function Landing() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<"athlete" | "coach" | null>(null);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginStep, setLoginStep] = useState<"credentials" | "verification">("credentials");
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -82,46 +85,85 @@ export default function Landing() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: async (loginEmail: string) => {
-      const res = await apiRequest("POST", "/api/login", { email: loginEmail });
+    mutationFn: async ({ email: loginEmail, password: loginPassword }: { email: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/login", { email: loginEmail, password: loginPassword });
       return await res.json();
     },
-    onSuccess: (athlete: Athlete) => {
-      localStorage.setItem("currentAthlete", JSON.stringify(athlete));
+    onSuccess: () => {
+      setLoginError(null);
+      setLoginStep("verification");
       toast({
-        title: "Welcome back!",
-        description: "Redirecting you to coaches list...",
+        title: "Code sent",
+        description: "Check your email for the verification code.",
       });
-      setLocation("/coaches");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message === "404: User not found" ? "User not found" : error.message,
-        variant: "destructive",
-      });
+      const msg = error.message;
+      if (msg.includes("404")) {
+        setLoginError("No account found with this email.");
+      } else if (msg.includes("401")) {
+        setLoginError("Incorrect password. Please try again.");
+      } else {
+        setLoginError(msg);
+      }
     },
   });
 
   const coachLoginMutation = useMutation({
-    mutationFn: async (loginEmail: string) => {
-      const res = await apiRequest("POST", "/api/login/coach", { email: loginEmail });
+    mutationFn: async ({ email: loginEmail, password: loginPassword }: { email: string; password: string }) => {
+      const res = await apiRequest("POST", "/api/login/coach", { email: loginEmail, password: loginPassword });
       return await res.json();
     },
-    onSuccess: (coach: Coach) => {
-      localStorage.setItem("currentCoach", JSON.stringify(coach));
+    onSuccess: () => {
+      setLoginError(null);
+      setLoginStep("verification");
       toast({
-        title: "Welcome back!",
-        description: "Redirecting you to your profile...",
+        title: "Code sent",
+        description: "Check your email for the verification code.",
       });
-      setLocation("/coach-profile");
     },
     onError: (error: Error) => {
-      toast({
-        title: "Login failed",
-        description: error.message === "404: Coach not found" ? "Coach not found" : error.message,
-        variant: "destructive",
-      });
+      const msg = error.message;
+      if (msg.includes("404")) {
+        setLoginError("No coach account found with this email.");
+      } else if (msg.includes("401")) {
+        setLoginError("Incorrect password. Please try again.");
+      } else {
+        setLoginError(msg);
+      }
+    },
+  });
+
+  const verifyCodeMutation = useMutation({
+    mutationFn: async ({ email: verifyEmail, code }: { email: string; code: string }) => {
+      const endpoint = role === "athlete" ? "/api/login/verify" : "/api/login/coach/verify";
+      const res = await apiRequest("POST", endpoint, { email: verifyEmail, code });
+      return await res.json();
+    },
+    onSuccess: (data: Athlete | Coach) => {
+      if (role === "athlete") {
+        localStorage.setItem("currentAthlete", JSON.stringify(data));
+        toast({
+          title: "Welcome back!",
+          description: "Redirecting you to coaches list...",
+        });
+        setLocation("/coaches");
+      } else {
+        localStorage.setItem("currentCoach", JSON.stringify(data));
+        toast({
+          title: "Welcome back!",
+          description: "Redirecting you to your profile...",
+        });
+        setLocation("/coach-profile");
+      }
+    },
+    onError: (error: Error) => {
+      const msg = error.message;
+      if (msg.includes("401")) {
+        setLoginError("Invalid or expired verification code.");
+      } else {
+        setLoginError(msg);
+      }
     },
   });
 
@@ -130,8 +172,9 @@ export default function Landing() {
     setStep(2);
   };
 
-  const handleEmailSubmit = (submittedEmail: string) => {
+  const handleEmailSubmit = (submittedEmail: string, submittedPassword: string) => {
     setEmail(submittedEmail);
+    setPassword(submittedPassword);
     setStep(3);
   };
 
@@ -158,6 +201,7 @@ export default function Landing() {
       sport: profile.sports[0],
       location: profile.location,
       email: email,
+      password: password,
       profileImage: profile.profileImage,
     };
 
@@ -189,8 +233,15 @@ export default function Landing() {
   };
 
   const handleBackFromEmail = () => {
+    if (loginStep === "verification") {
+      setLoginStep("credentials");
+      setLoginError(null);
+      return;
+    }
     setStep(1);
     setRole(null);
+    setLoginStep("credentials");
+    setLoginError(null);
   };
 
   const handleBackFromProfile = () => {
@@ -229,14 +280,23 @@ export default function Landing() {
               role={role}
               onSubmit={handleEmailSubmit}
               onBack={handleBackFromEmail}
-              onLogin={(email) => {
+              onLogin={(loginEmail, loginPassword) => {
+                setEmail(loginEmail);
+                setLoginError(null);
                 if (role === "athlete") {
-                  loginMutation.mutate(email);
+                  loginMutation.mutate({ email: loginEmail, password: loginPassword });
                 } else {
-                  coachLoginMutation.mutate(email);
+                  coachLoginMutation.mutate({ email: loginEmail, password: loginPassword });
                 }
               }}
+              onVerifyCode={(verifyEmail, code) => {
+                setLoginError(null);
+                verifyCodeMutation.mutate({ email: verifyEmail, code });
+              }}
               isLoginPending={role === "athlete" ? loginMutation.isPending : coachLoginMutation.isPending}
+              isVerifyPending={verifyCodeMutation.isPending}
+              loginStep={loginStep}
+              loginError={loginError}
               initialIsSignIn={isSignInMode}
             />
           )}
