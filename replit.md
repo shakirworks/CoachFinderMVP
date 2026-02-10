@@ -24,16 +24,21 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage Solutions
 - **Database**: PostgreSQL (via Drizzle ORM and Neon serverless driver).
 - **Schema**:
-    - **Athletes**: `id`, `name`, `sport`, `location`, `email`, `profileImage`, `availableForCoachRequests`, `gender`, `age`, `skillLevel`, `preferredCoachGender`.
-    - **Coaches**: `id`, `name`, `sport`, `location`, `email`, `profileImage`, `hourly_rate`, `coaching_options` (array), `years_of_experience`, `student_levels` (array), `stripeAccountId`, `stripeAccountStatus`, `stripeOnboardingComplete`.
+    - **Athletes**: `id`, `name`, `sport`, `location`, `email`, `password`, `emailVerified`, `profileImage`, `availableForCoachRequests`, `gender`, `age`, `skillLevel`, `preferredCoachGender`.
+    - **Coaches**: `id`, `name`, `sport`, `location`, `email`, `password`, `emailVerified`, `profileImage`, `hourly_rate`, `coaching_options` (array), `years_of_experience`, `student_levels` (array), `stripeAccountId`, `stripeAccountStatus`, `stripeOnboardingComplete`.
+    - **Verification Codes**: `id`, `email`, `code`, `role`, `type` (login/signup), `hashedPassword`, `expiresAt`, `used`.
     - **Messages**: `id`, `athleteId`, `coachId`, `message`, `senderType`, `createdAt`.
     - **Purchases**: `id`, `athleteId`, `coachId`, `subtotal`, `serviceFee`, `totalAmount`, `status`, `selectedSlots`.
     - **Invoices**: `id`, `purchaseId`, `invoiceNumber`, `issuedAt`, `paidAt`, `providerReceiptUrl`.
 - **Migration Strategy**: Drizzle ORM for schema management and migrations.
 
 ### Authentication and Authorization
-- **Current State**: Email-based profile creation without password verification; user identification via localStorage for MVP.
-- **Design Intent**: Ready for future session-based or OAuth authentication.
+- **Signup Flow**: Email + password entry → verification email sent with link (24hr expiry) → user clicks link → email verified page → profile setup → account created with hashed password from verification record.
+- **Sign-in Flow**: Email + password verification → 5-digit code sent to email (10min expiry) → code verified → user logged in.
+- **Password Security**: bcrypt hashing (10 rounds), passwords never returned in API responses.
+- **Email Verification**: Verification tokens (UUID) stored in `verification_codes` table with type="signup", role, and hashed password. Token marked as used after account creation.
+- **Email Service**: Nodemailer with SMTP (support@coachfinders.ca), sends welcome verification emails and login codes.
+- **State Management**: localStorage for user sessions (MVP), ready for session-based auth upgrade.
 
 ## External Dependencies
 

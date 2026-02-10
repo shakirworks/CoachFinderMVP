@@ -14,6 +14,7 @@ interface EmailSignupFormProps {
   onVerifyCode: (email: string, code: string) => void;
   isLoginPending: boolean;
   isVerifyPending: boolean;
+  isSignupPending?: boolean;
   loginStep: "credentials" | "verification";
   loginError: string | null;
   initialIsSignIn?: boolean;
@@ -27,6 +28,7 @@ export default function EmailSignupForm({
   onVerifyCode,
   isLoginPending,
   isVerifyPending,
+  isSignupPending = false,
   loginStep,
   loginError,
   initialIsSignIn = false,
@@ -320,7 +322,7 @@ export default function EmailSignupForm({
             className="w-full h-12"
             disabled={
               (isSignIn && (isLoginPending || !password)) ||
-              (!isSignIn && (emailExists || isCheckingEmail || !passwordValid || !passwordsMatch)) ||
+              (!isSignIn && (emailExists || isCheckingEmail || !passwordValid || !passwordsMatch || isSignupPending)) ||
               false
             }
             data-testid={isSignIn ? "button-signin" : "button-continue"}
@@ -329,9 +331,11 @@ export default function EmailSignupForm({
               ? isLoginPending
                 ? "Signing in..."
                 : "Sign In"
-              : isCheckingEmail && debouncedEmail
-                ? "Checking..."
-                : "Continue"}
+              : isSignupPending
+                ? "Sending verification..."
+                : isCheckingEmail && debouncedEmail
+                  ? "Checking..."
+                  : "Continue"}
           </Button>
           <Button
             type="button"

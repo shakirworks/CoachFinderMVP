@@ -11,6 +11,8 @@ import AthleteProfile from "@/pages/AthleteProfile";
 import CoachProfile from "@/pages/CoachProfile";
 import CoachOwnProfile from "@/pages/CoachOwnProfile";
 import BookingSuccess from "@/pages/BookingSuccess";
+import VerifyEmail from "@/pages/VerifyEmail";
+import ProfileSetup from "@/pages/ProfileSetup";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +28,8 @@ function Router() {
         <Route path="/coach-profile" component={CoachOwnProfile} />
         <Route path="/coach/:id" component={CoachProfile} />
         <Route path="/booking/success" component={BookingSuccess} />
+        <Route path="/verify-email" component={VerifyEmail} />
+        <Route path="/profile-setup" component={ProfileSetup} />
         <Route component={NotFound} />
       </Switch>
     </PageTransition>

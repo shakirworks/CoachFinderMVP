@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import bcrypt from "bcryptjs";
-import { sendVerificationCode } from "./email";
+import { randomUUID } from "crypto";
+import { sendVerificationCode, sendWelcomeVerification } from "./email";
 
 const SERVICE_FEE_PERCENTAGE = 0.10;
 const PLATFORM_FEE_PERCENTAGE = 0.10;
@@ -24,12 +25,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/signup/send-verification", async (req, res) => {
+    try {
+      const { email, password, role } = req.body;
+      if (!email || !password || !role) {
+        return res.status(400).json({ error: "Email, password, and role are required" });
+      }
+      if (!["athlete", "coach"].includes(role)) {
+        return res.status(400).json({ error: "Role must be 'athlete' or 'coach'" });
+      }
+
+      const existing = await storage.checkEmailExists(email);
+      if (existing.exists) {
+        return res.status(409).json({ error: "An account with this email already exists." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const token = randomUUID();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await storage.createVerificationCode({
+        email,
+        code: token,
+        role,
+        type: "signup",
+        hashedPassword,
+        expiresAt,
+        used: "false",
+      });
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const verificationLink = `${baseUrl}/verify-email?token=${token}`;
+
+      try {
+        await sendWelcomeVerification(email, verificationLink, role as "athlete" | "coach");
+      } catch (emailError: any) {
+        console.error("Failed to send welcome email:", emailError.message);
+        return res.status(500).json({ error: "Failed to send verification email. Please try again." });
+      }
+
+      res.json({ success: true, message: "Verification email sent. Please check your inbox." });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/verify-email/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const record = await storage.getVerificationCodeByToken(token);
+
+      if (!record) {
+        return res.status(400).json({ error: "Invalid or already used verification link." });
+      }
+
+      if (record.type !== "signup") {
+        return res.status(400).json({ error: "Invalid verification link." });
+      }
+
+      if (record.used === "true") {
+        return res.status(400).json({ error: "This verification link has already been used." });
+      }
+
+      if (new Date() > record.expiresAt) {
+        return res.status(400).json({ error: "This verification link has expired. Please sign up again." });
+      }
+
+      if (!["athlete", "coach"].includes(record.role)) {
+        return res.status(400).json({ error: "Invalid verification link." });
+      }
+
+      res.json({
+        verified: true,
+        email: record.email,
+        role: record.role,
+        token,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create athlete
   app.post("/api/athletes", async (req, res) => {
     try {
-      const athleteData = insertAthleteSchema.parse(req.body);
-      const hashedPassword = await bcrypt.hash(athleteData.password, 10);
-      const athlete = await storage.createAthlete({ ...athleteData, password: hashedPassword });
+      const { verificationToken, ...bodyData } = req.body;
+      let finalPassword: string;
+
+      if (verificationToken) {
+        const record = await storage.getVerificationCodeByToken(verificationToken);
+        if (!record || !record.hashedPassword) {
+          return res.status(400).json({ error: "Invalid or expired verification token." });
+        }
+        if (record.type !== "signup" || record.role !== "athlete") {
+          return res.status(400).json({ error: "Invalid verification token for this account type." });
+        }
+        if (record.used === "true") {
+          return res.status(400).json({ error: "This verification token has already been used." });
+        }
+        if (new Date() > record.expiresAt) {
+          return res.status(400).json({ error: "Verification token has expired. Please sign up again." });
+        }
+        finalPassword = record.hashedPassword;
+        await storage.markVerificationCodeUsed(record.id);
+        bodyData.password = "placeholder";
+        bodyData.emailVerified = "true";
+      } else {
+        finalPassword = await bcrypt.hash(bodyData.password, 10);
+      }
+
+      const athleteData = insertAthleteSchema.parse(bodyData);
+      const athlete = await storage.createAthlete({ ...athleteData, password: finalPassword });
       const { password: _, ...safeAthlete } = athlete;
       res.json(safeAthlete);
     } catch (error: any) {
@@ -84,17 +190,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create coach
   app.post("/api/coaches", async (req, res) => {
     try {
-      const coachData = insertCoachSchema.parse(req.body);
-      
-      const existingCoach = await storage.getCoachByEmail(coachData.email);
-      if (existingCoach) {
-        return res.status(409).json({ 
-          error: "A coach account with this email already exists. Please use a different email or log in to your existing account." 
-        });
+      const { verificationToken, ...bodyData } = req.body;
+      let finalPassword: string;
+
+      if (verificationToken) {
+        const record = await storage.getVerificationCodeByToken(verificationToken);
+        if (!record || !record.hashedPassword) {
+          return res.status(400).json({ error: "Invalid or expired verification token." });
+        }
+        if (record.type !== "signup" || record.role !== "coach") {
+          return res.status(400).json({ error: "Invalid verification token for this account type." });
+        }
+        if (record.used === "true") {
+          return res.status(400).json({ error: "This verification token has already been used." });
+        }
+        if (new Date() > record.expiresAt) {
+          return res.status(400).json({ error: "Verification token has expired. Please sign up again." });
+        }
+        finalPassword = record.hashedPassword;
+        await storage.markVerificationCodeUsed(record.id);
+        bodyData.password = "placeholder";
+        bodyData.emailVerified = "true";
+      } else {
+        const existingCoach = await storage.getCoachByEmail(bodyData.email);
+        if (existingCoach) {
+          return res.status(409).json({ 
+            error: "A coach account with this email already exists. Please use a different email or log in to your existing account." 
+          });
+        }
+        finalPassword = await bcrypt.hash(bodyData.password, 10);
       }
-      
-      const hashedPassword = await bcrypt.hash(coachData.password, 10);
-      const coach = await storage.createCoach({ ...coachData, password: hashedPassword });
+
+      const coachData = insertCoachSchema.parse(bodyData);
+      const coach = await storage.createCoach({ ...coachData, password: finalPassword });
       const { password: _, ...safeCoach } = coach;
       res.json(safeCoach);
     } catch (error: any) {

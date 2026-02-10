@@ -56,6 +56,7 @@ export interface IStorage {
 
   createVerificationCode(code: InsertVerificationCode): Promise<VerificationCode>;
   getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined>;
+  getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined>;
   markVerificationCodeUsed(id: string): Promise<void>;
   deleteExpiredVerificationCodes(): Promise<void>;
 }
@@ -135,6 +136,8 @@ export class MemStorage implements IStorage {
         sport: coach.sport,
         location: coach.location,
         email: coach.email,
+        password: "demo",
+        emailVerified: "true",
         profileImage: null,
         certification: null,
         performanceLevel: null,
@@ -172,6 +175,7 @@ export class MemStorage implements IStorage {
       location: insertAthlete.location,
       email: insertAthlete.email,
       password: insertAthlete.password,
+      emailVerified: insertAthlete.emailVerified ?? "false",
       profileImage: insertAthlete.profileImage ?? null,
       availableForCoachRequests: insertAthlete.availableForCoachRequests ?? "false",
       gender: insertAthlete.gender ?? null,
@@ -228,6 +232,7 @@ export class MemStorage implements IStorage {
       location: insertCoach.location,
       email: insertCoach.email,
       password: insertCoach.password,
+      emailVerified: insertCoach.emailVerified ?? "false",
       profileImage: insertCoach.profileImage ?? null,
       certification: insertCoach.certification ?? null,
       performanceLevel: insertCoach.performanceLevel ?? null,
@@ -448,6 +453,10 @@ export class MemStorage implements IStorage {
   }
 
   async getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined> {
+    throw new Error("Not implemented - use PostgresStorage");
+  }
+
+  async getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined> {
     throw new Error("Not implemented - use PostgresStorage");
   }
 
@@ -811,6 +820,21 @@ export class PostgresStorage implements IStorage {
           eq(verificationCodes.email, email),
           eq(verificationCodes.code, code),
           eq(verificationCodes.role, role),
+          eq(verificationCodes.used, "false")
+        )
+      )
+      .orderBy(desc(verificationCodes.createdAt));
+    return result[0];
+  }
+
+  async getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined> {
+    const result = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.code, token),
+          eq(verificationCodes.type, "signup"),
           eq(verificationCodes.used, "false")
         )
       )

@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import RoleSelectionCard from "@/components/RoleSelectionCard";
 import EmailSignupForm from "@/components/EmailSignupForm";
-import ProfileSetupForm from "@/components/ProfileSetupForm";
 import ProgressIndicator from "@/components/ProgressIndicator";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Mail, ArrowLeft } from "lucide-react";
 import type { Athlete, Coach } from "@shared/schema";
 
 export default function Landing() {
@@ -16,64 +18,24 @@ export default function Landing() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<"athlete" | "coach" | null>(null);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loginStep, setLoginStep] = useState<"credentials" | "verification">("credentials");
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [signupEmailSent, setSignupEmailSent] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const createAthleteMutation = useMutation({
-    mutationFn: async (data: { name: string; sport: string; location: string; email: string; profileImage?: string; availableForCoachRequests?: boolean; gender?: string; age?: string; skillLevel?: string; preferredCoachGender?: string }) => {
-      const res = await apiRequest("POST", "/api/athletes", {
-        ...data,
-        availableForCoachRequests: data.availableForCoachRequests ? "true" : "false",
+  const sendVerificationMutation = useMutation({
+    mutationFn: async ({ email: signupEmail, password: signupPassword, role: signupRole }: { email: string; password: string; role: string }) => {
+      const res = await apiRequest("POST", "/api/signup/send-verification", {
+        email: signupEmail,
+        password: signupPassword,
+        role: signupRole,
       });
       return await res.json();
     },
-    onSuccess: (athlete: Athlete) => {
-      localStorage.setItem("currentAthlete", JSON.stringify(athlete));
-      toast({
-        title: "Profile created!",
-        description: "Welcome! Browse our coaches below.",
-      });
-      setLocation("/coaches");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createCoachMutation = useMutation({
-    mutationFn: async (data: { 
-      name: string; 
-      sport: string; 
-      location: string; 
-      email: string; 
-      profileImage?: string;
-      certification?: string;
-      performanceLevel?: string;
-      age?: string;
-      gender?: string;
-      bio?: string;
-      hourlyRate?: string;
-      coachingOptions?: string[];
-      yearsOfExperience?: string;
-      studentLevels?: string[];
-    }) => {
-      const res = await apiRequest("POST", "/api/coaches", data);
-      return await res.json();
-    },
-    onSuccess: (coach: Coach) => {
-      localStorage.setItem("currentCoach", JSON.stringify(coach));
-      toast({
-        title: "Profile created!",
-        description: "Your coach profile is now live.",
-      });
-      setLocation("/coach-profile");
+    onSuccess: () => {
+      setSignupEmailSent(true);
+      setStep(3);
     },
     onError: (error: Error) => {
       toast({
@@ -174,61 +136,8 @@ export default function Landing() {
 
   const handleEmailSubmit = (submittedEmail: string, submittedPassword: string) => {
     setEmail(submittedEmail);
-    setPassword(submittedPassword);
-    setStep(3);
-  };
-
-  const handleProfileSubmit = (profile: {
-    name: string;
-    location: string;
-    sports: string[];
-    profileImage?: string;
-    certification?: string;
-    performanceLevel?: string;
-    age?: string;
-    gender?: string;
-    bio?: string;
-    hourlyRate?: string;
-    coachingOptions?: string[];
-    yearsOfExperience?: string;
-    studentLevels?: string[];
-    availableForCoachRequests?: boolean;
-    skillLevel?: string;
-    preferredCoachGender?: string;
-  }) => {
-    const data: any = {
-      name: profile.name,
-      sport: profile.sports[0],
-      location: profile.location,
-      email: email,
-      password: password,
-      profileImage: profile.profileImage,
-    };
-
-    if (role === "athlete") {
-      data.availableForCoachRequests = profile.availableForCoachRequests;
-      data.gender = profile.gender;
-      data.age = profile.age;
-      data.skillLevel = profile.skillLevel;
-      data.preferredCoachGender = profile.preferredCoachGender;
-    }
-
-    if (role === "coach") {
-      data.certification = profile.certification;
-      data.performanceLevel = profile.performanceLevel;
-      data.age = profile.age;
-      data.gender = profile.gender;
-      data.bio = profile.bio;
-      data.hourlyRate = profile.hourlyRate;
-      data.coachingOptions = profile.coachingOptions;
-      data.yearsOfExperience = profile.yearsOfExperience;
-      data.studentLevels = profile.studentLevels;
-    }
-
-    if (role === "athlete") {
-      createAthleteMutation.mutate(data);
-    } else if (role === "coach") {
-      createCoachMutation.mutate(data);
+    if (role) {
+      sendVerificationMutation.mutate({ email: submittedEmail, password: submittedPassword, role });
     }
   };
 
@@ -242,10 +151,6 @@ export default function Landing() {
     setRole(null);
     setLoginStep("credentials");
     setLoginError(null);
-  };
-
-  const handleBackFromProfile = () => {
-    setStep(2);
   };
 
   return (
@@ -298,16 +203,49 @@ export default function Landing() {
               loginStep={loginStep}
               loginError={loginError}
               initialIsSignIn={isSignInMode}
+              isSignupPending={sendVerificationMutation.isPending}
             />
           )}
 
-          {step === 3 && role && email && (
-            <ProfileSetupForm
-              role={role}
-              email={email}
-              onSubmit={handleProfileSubmit}
-              onBack={handleBackFromProfile}
-            />
+          {step === 3 && signupEmailSent && (
+            <div className="flex items-center justify-center">
+              <Card className="w-full max-w-md">
+                <CardContent className="pt-8 pb-8 text-center">
+                  <div className="space-y-6">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <Mail className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-bold" data-testid="text-check-email-title">
+                        Check Your Email
+                      </h2>
+                      <p className="text-muted-foreground">
+                        We've sent a welcome message with a verification link to:
+                      </p>
+                      <p className="font-medium" data-testid="text-sent-email">{email}</p>
+                    </div>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <p>Click the link in the email to verify your address and continue setting up your profile.</p>
+                      <p>The link expires in 24 hours. Check your spam folder if you don't see it.</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setStep(1);
+                        setRole(null);
+                        setSignupEmailSent(false);
+                        setEmail("");
+                      }}
+                      data-testid="button-back-to-start"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Start
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>

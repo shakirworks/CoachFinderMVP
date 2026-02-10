@@ -52,3 +52,52 @@ export async function sendVerificationCode(
     text: `Your CoachFinders verification code is: ${code}\n\nThis code expires in 10 minutes. If you did not request this code, you can safely ignore this email.\n\n- CoachFinders Team`,
   });
 }
+
+export async function sendWelcomeVerification(
+  to: string,
+  verificationLink: string,
+  role: "athlete" | "coach"
+): Promise<void> {
+  const roleLabel = role === "athlete" ? "Athlete" : "Coach";
+
+  await transporter.sendMail({
+    from: `"CoachFinders" <${process.env.SMTP_USER || "support@coachfinders.ca"}>`,
+    to,
+    subject: "Welcome to CoachFinders - Verify Your Email",
+    html: `
+      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 8px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h1 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0;">CoachFinders</h1>
+          <p style="color: #666; font-size: 14px; margin-top: 4px;">Premium Athletic Coaching Platform</p>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">
+          Welcome to CoachFinders!
+        </p>
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">
+          Thank you for signing up as ${role === "athlete" ? "an" : "a"} <strong>${roleLabel}</strong>. To complete your registration, please verify your email address by clicking the button below:
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${verificationLink}" style="display: inline-block; background: #7c2d3c; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none;">
+            Verify My Email
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.5;">
+          Or copy and paste this link into your browser:
+        </p>
+        <p style="color: #7c2d3c; font-size: 13px; line-height: 1.5; word-break: break-all;">
+          ${verificationLink}
+        </p>
+        <p style="color: #666; font-size: 14px; line-height: 1.5;">
+          This link expires in <strong>24 hours</strong>. If you did not create an account, you can safely ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #999; font-size: 12px; text-align: center;">
+          &copy; ${new Date().getFullYear()} CoachFinders. All rights reserved.<br />
+          support@coachfinders.ca
+        </p>
+      </div>
+    `,
+    text: `Welcome to CoachFinders!\n\nThank you for signing up as ${role === "athlete" ? "an" : "a"} ${roleLabel}. Please verify your email by visiting: ${verificationLink}\n\nThis link expires in 24 hours. If you did not create an account, you can safely ignore this email.\n\n- CoachFinders Team`,
+  });
+}
