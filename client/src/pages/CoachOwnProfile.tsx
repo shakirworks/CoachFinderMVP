@@ -381,17 +381,17 @@ export default function CoachOwnProfile() {
                 <div className="space-y-4">
                   <h3 className="font-medium">Stripe Connect</h3>
                   <p className="text-sm text-muted-foreground">
-                    Connect your Stripe account to receive payments from athletes. 
-                    A 10% service fee is deducted from each booking.
+                    Connect your Stripe account to receive payments directly from athletes. 
+                    A 7% platform service fee applies to each booking.
                   </p>
                   
                   {coach.stripeOnboardingComplete === "true" ? (
                     <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                       <div>
-                        <p className="font-medium text-green-700 dark:text-green-300">Account Connected</p>
+                        <p className="font-medium text-green-700 dark:text-green-300" data-testid="text-stripe-connected">Account Connected</p>
                         <p className="text-sm text-green-600 dark:text-green-400">
-                          Your Stripe account is set up and ready to receive payments.
+                          Your Stripe account is set up and ready to receive payments directly.
                         </p>
                       </div>
                     </div>
@@ -406,11 +406,15 @@ export default function CoachOwnProfile() {
                       </div>
                       <Button
                         variant="outline"
-                        className="opacity-50 cursor-not-allowed"
-                        disabled
+                        onClick={() => stripeOnboardingMutation.mutate()}
+                        disabled={stripeOnboardingMutation.isPending}
                         data-testid="button-continue-onboarding"
                       >
-                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {stripeOnboardingMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
                         Continue Setup
                       </Button>
                     </div>
@@ -423,13 +427,16 @@ export default function CoachOwnProfile() {
                         </p>
                       </div>
                       <Button
-                        variant="outline"
-                        className="opacity-50 cursor-not-allowed"
-                        disabled
+                        onClick={() => stripeOnboardingMutation.mutate()}
+                        disabled={stripeOnboardingMutation.isPending}
                         data-testid="button-connect-stripe"
                       >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Connect with Stripe
+                        {stripeOnboardingMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CreditCard className="h-4 w-4 mr-2" />
+                        )}
+                        {stripeOnboardingMutation.isPending ? "Connecting..." : "Connect with Stripe"}
                       </Button>
                     </div>
                   )}
@@ -437,15 +444,20 @@ export default function CoachOwnProfile() {
 
                 <div className="pt-6 border-t space-y-4">
                   <h3 className="font-medium">Payment Information</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">Hourly Rate</p>
-                      <p className="text-xl font-semibold">${coach.hourlyRate || 0}/hr</p>
+                      <p className="text-xl font-semibold" data-testid="text-hourly-rate">CA${coach.hourlyRate || 0}/hr</p>
+                    </div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Platform Fee</p>
+                      <p className="text-xl font-semibold">7%</p>
+                      <p className="text-xs text-muted-foreground">CoachFinders service fee</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">You Receive</p>
-                      <p className="text-xl font-semibold">${((Number(coach.hourlyRate) || 0) * 0.9).toFixed(2)}/hr</p>
-                      <p className="text-xs text-muted-foreground">After 10% service fee</p>
+                      <p className="text-xl font-semibold" data-testid="text-coach-earnings">CA${((Number(coach.hourlyRate) || 0) * 0.93).toFixed(2)}/hr</p>
+                      <p className="text-xs text-muted-foreground">After 7% service fee</p>
                     </div>
                   </div>
                 </div>

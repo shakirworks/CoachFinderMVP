@@ -57,7 +57,6 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     endTime: string;
   }>;
   
-  // Create invoice with full details
   const invoiceNumber = await storage.generateInvoiceNumber();
   await storage.createInvoice({
     purchaseId,
@@ -70,6 +69,7 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     coachEmail: coach.email,
     subtotal: purchase.subtotal,
     serviceFee: purchase.serviceFee,
+    taxAmount: purchase.taxAmount,
     totalAmount: purchase.totalAmount,
     currency: purchase.currency,
     sessionDetails: selectedSlots,
@@ -90,7 +90,6 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
   
   // Create notification for the coach
   const sessionCount = selectedSlots.length;
-  const totalFormatted = (purchase.totalAmount / 100).toFixed(2);
   const coachAmount = ((purchase.subtotal) / 100).toFixed(2);
   
   await storage.createNotification({
@@ -98,7 +97,7 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     recipientType: 'coach',
     type: 'new_booking',
     title: 'New Booking Received!',
-    message: `${athlete.name} booked ${sessionCount} session${sessionCount > 1 ? 's' : ''} with you. You'll receive $${coachAmount} (after platform fee).`,
+    message: `${athlete.name} booked ${sessionCount} session${sessionCount > 1 ? 's' : ''} with you. You'll receive CA$${coachAmount} directly to your Stripe account.`,
     data: {
       purchaseId,
       athleteId: purchase.athleteId,

@@ -81,8 +81,10 @@ export function BookingSummaryCard({
   };
 
   const subtotalCents = hourlyRate * 100 * selectedSlots.length;
-  const serviceFeeCents = Math.round(subtotalCents * 0.10);
-  const totalCents = subtotalCents + serviceFeeCents;
+  const serviceFeeCents = Math.round(subtotalCents * 0.07);
+  const taxableAmount = subtotalCents + serviceFeeCents;
+  const taxAmountCents = Math.round(taxableAmount * 0.13);
+  const totalCents = subtotalCents + serviceFeeCents + taxAmountCents;
 
   const groupedSlots = selectedSlots.reduce((acc, slot) => {
     if (!acc[slot.date]) {
@@ -166,17 +168,21 @@ export function BookingSummaryCard({
         <div className="space-y-1.5 text-xs">
           <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">
-              {selectedSlots.length} x ${hourlyRate}/hr
+              {selectedSlots.length} x CA${hourlyRate}/hr
             </span>
             <span data-testid="text-subtotal">{formatCurrency(subtotalCents)}</span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-muted-foreground">Service fee (10%)</span>
+            <span className="text-muted-foreground">Service fee (7%)</span>
             <span data-testid="text-service-fee">{formatCurrency(serviceFeeCents)}</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">HST (13%)</span>
+            <span data-testid="text-tax">{formatCurrency(taxAmountCents)}</span>
           </div>
           <Separator className="my-1.5" />
           <div className="flex justify-between gap-2 font-semibold text-sm">
-            <span>Total</span>
+            <span>Total (CAD)</span>
             <span data-testid="text-total">{formatCurrency(totalCents)}</span>
           </div>
         </div>

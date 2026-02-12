@@ -42,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 
 ## External Dependencies
 
-- **Payment Gateway**: Stripe (Stripe Checkout for athletes, Stripe Connect for coaches, webhooks for event handling).
+- **Payment Gateway**: Stripe (Stripe Checkout for athletes, Stripe Connect Express accounts for coaches in Canada, destination charges model). Platform fee: 7% service fee + 13% HST (Ontario) on (subtotal + service fee). Coach receives subtotal directly; platform collects application_fee_amount = serviceFee + taxAmount. All amounts in CAD.
 - **UI Libraries**: Radix UI, shadcn/ui, Lucide React (icons).
 - **Database & ORM**: Drizzle ORM, `@neondatabase/serverless` (PostgreSQL driver).
 - **Utilities**: `date-fns`, `zod`, `class-variance-authority`, `clsx`, `tailwind-merge`.

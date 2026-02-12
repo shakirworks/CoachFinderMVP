@@ -7,8 +7,8 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { sendVerificationCode, sendWelcomeVerification } from "./email";
 
-const SERVICE_FEE_PERCENTAGE = 0.10;
-const PLATFORM_FEE_PERCENTAGE = 0.10;
+const SERVICE_FEE_PERCENTAGE = 0.07;
+const HST_PERCENTAGE = 0.13;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Check if email exists
@@ -579,12 +579,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No valid slots found" });
       }
       
-      // Calculate pricing (in cents for precision)
       const hourlyRate = parseFloat(coach.hourlyRate || "50");
       const hourlyRateCents = Math.round(hourlyRate * 100);
       const subtotalCents = hourlyRateCents * slots.length;
       const serviceFeeCents = Math.round(subtotalCents * SERVICE_FEE_PERCENTAGE);
-      const totalAmountCents = subtotalCents + serviceFeeCents;
+      const taxableAmount = subtotalCents + serviceFeeCents;
+      const taxAmountCents = Math.round(taxableAmount * HST_PERCENTAGE);
+      const totalAmountCents = subtotalCents + serviceFeeCents + taxAmountCents;
       
       const quote = {
         coachId,
@@ -599,8 +600,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subtotal: subtotalCents,
         serviceFee: serviceFeeCents,
         serviceFeePercentage: SERVICE_FEE_PERCENTAGE,
+        taxAmount: taxAmountCents,
+        taxPercentage: HST_PERCENTAGE,
         totalAmount: totalAmountCents,
-        currency: "USD",
+        currency: "CAD",
       };
       
       res.json(quote);
@@ -631,22 +634,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const stripe = await getUncachableStripeClient();
       
-      // Check if coach already has a Stripe account
+      const forwardedProto = req.get("x-forwarded-proto") || req.protocol;
+      const forwardedHost = req.get("x-forwarded-host") || req.get("host");
+      const origin = req.get("origin");
+      const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
+
       if (coach.stripeAccountId) {
-        // Create new account link for existing account
         const accountLink = await stripe.accountLinks.create({
           account: coach.stripeAccountId,
-          refresh_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=refresh`,
-          return_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=success`,
+          refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
+          return_url: `${baseUrl}/coach-profile?stripe=success`,
           type: 'account_onboarding',
         });
         return res.json({ url: accountLink.url, accountId: coach.stripeAccountId });
       }
 
-      // Create new Stripe Connect account
       const account = await stripe.accounts.create({
         type: 'express',
-        country: 'US',
+        country: 'CA',
         email: coach.email,
         capabilities: {
           card_payments: { requested: true },
@@ -659,18 +664,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
-      // Save Stripe account ID to coach
       await storage.updateCoach(coachId, {
         stripeAccountId: account.id,
         stripeAccountStatus: 'pending',
         stripeOnboardingComplete: 'false',
       });
 
-      // Create account link for onboarding
       const accountLink = await stripe.accountLinks.create({
         account: account.id,
-        refresh_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=refresh`,
-        return_url: `${req.protocol}://${req.get('host')}/coach-dashboard?stripe=success`,
+        refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
+        return_url: `${baseUrl}/coach-profile?stripe=success`,
         type: 'account_onboarding',
       });
 
@@ -767,21 +770,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No valid slots found" });
       }
       
-      // Calculate pricing (in cents)
       const hourlyRate = parseFloat(coach.hourlyRate || "50");
       const hourlyRateCents = Math.round(hourlyRate * 100);
       const subtotalCents = hourlyRateCents * slots.length;
       const serviceFeeCents = Math.round(subtotalCents * SERVICE_FEE_PERCENTAGE);
-      const totalAmountCents = subtotalCents + serviceFeeCents;
+      const taxableAmount = subtotalCents + serviceFeeCents;
+      const taxAmountCents = Math.round(taxableAmount * HST_PERCENTAGE);
+      const totalAmountCents = subtotalCents + serviceFeeCents + taxAmountCents;
+
+      if (!coach.stripeAccountId) {
+        return res.status(400).json({ error: "This coach has not connected their Stripe account yet. Payments cannot be processed." });
+      }
       
-      // Create pending purchase
       const purchase = await storage.createPurchase({
         athleteId,
         coachId,
         subtotal: subtotalCents,
         serviceFee: serviceFeeCents,
+        taxAmount: taxAmountCents,
         totalAmount: totalAmountCents,
-        currency: "USD",
+        currency: "CAD",
         status: "pending",
         paymentProvider: "stripe",
         selectedSlots: slots.map(slot => ({
@@ -792,7 +800,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })),
       });
 
-      // Helper function to format time for display
       const formatTimeDisplay = (time: string): string => {
         const [hours, minutes] = time.split(":");
         let h = parseInt(hours);
@@ -802,40 +809,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return `${h}:${minutes} ${period}`;
       };
 
-      // Create line items for each session slot
       const sessionLineItems = slots.map(slot => ({
         price_data: {
-          currency: 'usd',
+          currency: 'cad',
           product_data: {
-            name: `Session with ${coach.name}`,
-            description: `${slot.date} • ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`,
+            name: `Coaching Session with ${coach.name}`,
+            description: `${slot.date} | ${formatTimeDisplay(slot.startTime)} - ${formatTimeDisplay(slot.endTime)}`,
           },
           unit_amount: hourlyRateCents,
         },
         quantity: 1,
       }));
 
-      // Add service fee as a separate line item
       const serviceFeeLineItem = {
         price_data: {
-          currency: 'usd',
+          currency: 'cad',
           product_data: {
-            name: 'Platform Service Fee',
-            description: '10% service fee for booking facilitation',
+            name: 'CoachFinders Service Fee (7%)',
+            description: 'Platform service fee for booking facilitation',
           },
           unit_amount: serviceFeeCents,
         },
         quantity: 1,
       };
 
-      // Create Stripe Checkout session
+      const taxLineItem = {
+        price_data: {
+          currency: 'cad',
+          product_data: {
+            name: 'HST (Ontario 13%)',
+            description: 'Harmonized Sales Tax - Ontario',
+          },
+          unit_amount: taxAmountCents,
+        },
+        quantity: 1,
+      };
+
+      const applicationFeeAmount = serviceFeeCents + taxAmountCents;
+
+      const forwardedProto = req.get("x-forwarded-proto") || req.protocol;
+      const forwardedHost = req.get("x-forwarded-host") || req.get("host");
+      const origin = req.get("origin");
+      const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
+
       const stripe = await getUncachableStripeClient();
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [...sessionLineItems, serviceFeeLineItem],
+        line_items: [...sessionLineItems, serviceFeeLineItem, taxLineItem],
         mode: 'payment',
-        success_url: `${req.protocol}://${req.get('host')}/booking/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchase.id}`,
-        cancel_url: `${req.protocol}://${req.get('host')}/coach/${coachId}?booking=cancelled`,
+        success_url: `${baseUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&purchase_id=${purchase.id}`,
+        cancel_url: `${baseUrl}/coach/${coachId}?booking=cancelled`,
         metadata: {
           purchaseId: purchase.id,
           athleteId,
@@ -843,6 +866,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           slotIds: slotIds.join(','),
         },
         customer_email: athlete.email,
+        payment_intent_data: {
+          application_fee_amount: applicationFeeAmount,
+          transfer_data: {
+            destination: coach.stripeAccountId,
+          },
+        },
       });
 
       // Update purchase with session ID
@@ -853,7 +882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sessionId: session.id,
         url: session.url,
         totalAmount: totalAmountCents,
-        currency: "USD",
+        currency: "CAD",
         status: "pending",
       });
     } catch (error: any) {
@@ -1066,16 +1095,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   <div class="totals">
     <div class="total-row">
-      <span>Subtotal</span>
-      <span>$${(invoice.subtotal / 100).toFixed(2)}</span>
+      <span>Coaching Sessions</span>
+      <span>CA$${(invoice.subtotal / 100).toFixed(2)}</span>
     </div>
     <div class="total-row">
-      <span>Service Fee (10%)</span>
-      <span>$${(invoice.serviceFee / 100).toFixed(2)}</span>
+      <span>Service Fee (7%)</span>
+      <span>CA$${(invoice.serviceFee / 100).toFixed(2)}</span>
+    </div>
+    <div class="total-row">
+      <span>HST (13%)</span>
+      <span>CA$${((invoice.taxAmount || 0) / 100).toFixed(2)}</span>
     </div>
     <div class="total-row final">
       <span>Total Paid</span>
-      <span>$${(invoice.totalAmount / 100).toFixed(2)} ${invoice.currency}</span>
+      <span>CA$${(invoice.totalAmount / 100).toFixed(2)} ${invoice.currency}</span>
     </div>
   </div>
 
