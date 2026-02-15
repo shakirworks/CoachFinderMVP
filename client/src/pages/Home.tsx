@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair } from "lucide-react";
+import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair, Menu, X } from "lucide-react";
 import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.avif";
 import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
@@ -9,19 +10,22 @@ import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909
 import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const scrollToSection = (id: string) => {
     const section = document.getElementById(id);
     section?.scrollIntoView({ behavior: "smooth" });
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="container flex h-16 items-center justify-between gap-4 px-4">
+          <div className="flex items-center gap-2">
             <img src={logoImage} alt="CoachFinders" className="h-8 w-auto" data-testid="img-header-logo" />
           </div>
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="hidden md:flex items-center gap-4">
             <Button variant="ghost" onClick={() => scrollToSection("about")} data-testid="button-about-nav">
               About Us
             </Button>
@@ -35,6 +39,33 @@ export default function Home() {
               <Button data-testid="button-getstarted-header">Get Started</Button>
             </Link>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            data-testid="button-mobile-menu"
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </Button>
+        </div>
+        <div
+          className={`md:hidden overflow-hidden bg-background transition-all duration-200 ease-in-out ${mobileMenuOpen ? "max-h-64 border-t" : "max-h-0"}`}
+        >
+          <nav className="container flex flex-col gap-1 px-4 py-3">
+            <Button variant="ghost" className="justify-start" onClick={() => scrollToSection("about")} data-testid="button-about-nav-mobile">
+              About Us
+            </Button>
+            <Button variant="ghost" className="justify-start" onClick={() => scrollToSection("feedback")} data-testid="button-feedback-nav-mobile">
+              Feedback
+            </Button>
+            <Link href="/signup?mode=signin">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="button-signin-mobile">Sign In</Button>
+            </Link>
+            <Link href="/signup">
+              <Button className="w-full" onClick={() => setMobileMenuOpen(false)} data-testid="button-getstarted-mobile">Get Started</Button>
+            </Link>
+          </nav>
         </div>
       </header>
 
