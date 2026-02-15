@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair } from "lucide-react";
-import heroImage from "@assets/stock_images/professional_sports__e977efaa.jpg";
+import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.avif";
 import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
 import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
