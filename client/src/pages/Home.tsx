@@ -7,6 +7,7 @@ import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.av
 import coachingImage from "@assets/premium_photo-1683133666522-15d8b06501b3_1771128470313.avif";
 import athleteImage from "@assets/photo-1711066444066-c7edf6ee7092_1771128881958.avif";
 import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
+import badgeImage from "@assets/Gemini_Generated_Image_weahysweahysweah_1771129690200.png";
 import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
@@ -23,6 +24,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between gap-4 px-4">
           <div className="flex items-center gap-2">
+            <img src={badgeImage} alt="CoachFinders badge" className="h-10 w-10 rounded-full object-cover" data-testid="img-header-badge" />
             <img src={logoImage} alt="CoachFinders" className="h-8 w-auto" data-testid="img-header-logo" />
           </div>
           <div className="hidden md:flex items-center gap-4">
