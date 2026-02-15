@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Mail } from "lucide-react";
-import logoImage from "@assets/image_1771126281641.png";
+import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
 
 export default function SiteFooter() {
   return (

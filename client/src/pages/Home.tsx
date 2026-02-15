@@ -5,7 +5,7 @@ import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield,
 import heroImage from "@assets/stock_images/professional_sports__e977efaa.jpg";
 import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
-import logoImage from "@assets/image_1771126281641.png";
+import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
 import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
@@ -50,7 +50,7 @@ export default function Home() {
         
         <div className="relative z-10 container text-center text-white px-6">
           <div className="flex justify-center mb-4">
-            <img src={logoImage} alt="CoachFinders" className="h-14 md:h-20 w-auto brightness-0 invert" data-testid="img-hero-logo" />
+            <img src={logoImage} alt="CoachFinders" className="h-14 md:h-20 w-auto drop-shadow-lg" data-testid="img-hero-logo" />
           </div>
           <h1 className="text-5xl md:text-7xl font-light tracking-tight mb-6 leading-tight" data-testid="text-hero-title">
             Find Your Perfect

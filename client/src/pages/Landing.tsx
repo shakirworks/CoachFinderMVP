@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, ArrowLeft } from "lucide-react";
 import type { Athlete, Coach } from "@shared/schema";
-import logoImage from "@assets/image_1771126281641.png";
+import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
 
 export default function Landing() {
   const searchString = useSearch();
