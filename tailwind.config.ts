@@ -75,6 +75,12 @@ export default {
           foreground: "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
           border: "var(--sidebar-accent-border)"
         },
+        "brand-green": {
+          DEFAULT: "hsl(var(--brand-green) / <alpha-value>)",
+        },
+        "brand-gold": {
+          DEFAULT: "hsl(var(--brand-gold) / <alpha-value>)",
+        },
         status: {
           online: "rgb(34 197 94)",
           away: "rgb(245 158 11)",

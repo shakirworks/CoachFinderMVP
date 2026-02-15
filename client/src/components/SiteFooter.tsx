@@ -1,5 +1,6 @@
 import { Link } from "wouter";
-import { Target, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
+import logoImage from "@assets/image_1771126281641.png";
 
 export default function SiteFooter() {
   return (
@@ -8,8 +9,7 @@ export default function SiteFooter() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <Target className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-lg">CoachFinders</span>
+              <img src={logoImage} alt="CoachFinders" className="h-7 w-auto" data-testid="img-footer-logo" />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               The premier platform connecting athletes with expert coaches across all sports.

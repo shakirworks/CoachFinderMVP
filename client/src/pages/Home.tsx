@@ -1,10 +1,11 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Target, Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe } from "lucide-react";
+import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair } from "lucide-react";
 import heroImage from "@assets/stock_images/professional_sports__e977efaa.jpg";
 import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
+import logoImage from "@assets/image_1771126281641.png";
 import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
@@ -18,8 +19,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-wrap">
-            <Target className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">CoachFinders</span>
+            <img src={logoImage} alt="CoachFinders" className="h-8 w-auto" data-testid="img-header-logo" />
           </div>
           <div className="flex items-center gap-4 flex-wrap">
             <Button variant="ghost" onClick={() => scrollToSection("about")} data-testid="button-about-nav">
@@ -49,7 +49,10 @@ export default function Home() {
         </div>
         
         <div className="relative z-10 container text-center text-white px-6">
-          <h1 className="text-5xl md:text-7xl font-light tracking-tight mb-6 leading-tight">
+          <div className="flex justify-center mb-4">
+            <img src={logoImage} alt="CoachFinders" className="h-14 md:h-20 w-auto brightness-0 invert" data-testid="img-hero-logo" />
+          </div>
+          <h1 className="text-5xl md:text-7xl font-light tracking-tight mb-6 leading-tight" data-testid="text-hero-title">
             Find Your Perfect
             <br />
             <span className="font-medium">Sports Coach</span>
@@ -162,7 +165,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-                    <Target className="h-4 w-4 text-primary" />
+                    <Crosshair className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <h4 className="font-medium mb-1">Personalized Training</h4>

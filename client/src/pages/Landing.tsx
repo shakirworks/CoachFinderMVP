@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, ArrowLeft } from "lucide-react";
 import type { Athlete, Coach } from "@shared/schema";
+import logoImage from "@assets/image_1771126281641.png";
 
 export default function Landing() {
   const searchString = useSearch();
@@ -166,11 +167,29 @@ export default function Landing() {
           {step === 1 && (
             <div className="space-y-8">
               <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                  {isSignInMode ? "Sign In" : "Join as an Athlete or Coach"}
+                <div className="flex justify-center mb-6">
+                  <img
+                    src={logoImage}
+                    alt="CoachFinders"
+                    className="h-12 md:h-16 w-auto"
+                    data-testid="img-logo"
+                  />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-landing-title">
+                  {isSignInMode ? (
+                    <>
+                      <span className="text-brand-green">Sign</span>{" "}
+                      <span className="text-brand-gold">In</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-brand-green">Find Your</span>{" "}
+                      <span className="text-brand-gold">Perfect Coach</span>
+                    </>
+                  )}
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  {isSignInMode ? "Select your role to continue" : "Choose how you want to get started"}
+                  {isSignInMode ? "Select your role to continue" : "Join as an athlete or coach to get started"}
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
