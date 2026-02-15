@@ -54,6 +54,10 @@ const SPORTS_OPTIONS = [
   "Soccer",
   "Tennis",
   "Golf",
+  "Pickleball",
+  "Skiing",
+  "Baseball",
+  "Personal Training",
 ];
 
 export default function ProfileSetupForm({

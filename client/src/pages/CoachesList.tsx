@@ -96,7 +96,7 @@ export default function CoachesList() {
     return matchesSearch && matchesSport && matchesLevels && matchesCoachingTypes && matchesMinRate && matchesMaxRate;
   });
 
-  const sports = ["Soccer", "Tennis", "Golf"];
+  const sports = ["Soccer", "Tennis", "Golf", "Pickleball", "Skiing", "Baseball", "Personal Training"];
 
   if (isLoading) {
     return (

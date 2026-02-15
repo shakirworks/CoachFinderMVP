@@ -172,7 +172,7 @@ export default function AthleteProfile() {
     );
   }
 
-  const sports = ["Soccer", "Tennis", "Golf"];
+  const sports = ["Soccer", "Tennis", "Golf", "Pickleball", "Skiing", "Baseball", "Personal Training"];
 
   return (
     <div className="min-h-screen bg-background">
