@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair, Menu, X } from "lucide-react";
 import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.avif";
-import coachingImage from "@assets/stock_images/athletic_training_se_3c4360fd.jpg";
+import coachingImage from "@assets/premium_photo-1683133666522-15d8b06501b3_1771128470313.avif";
 import athleteImage from "@assets/stock_images/sports_fitness_coach_7b57567b.jpg";
 import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
 import SiteFooter from "@/components/SiteFooter";
