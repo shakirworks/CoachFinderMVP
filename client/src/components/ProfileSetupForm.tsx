@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,9 +22,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SportsChip from "./SportsChip";
-import { Camera, MapPin, User, DollarSign, FileText } from "lucide-react";
-import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
-import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
+import { Camera, MapPin, User, DollarSign, FileText, Upload, X, ImagePlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileSetupFormProps {
   role: "athlete" | "coach";
@@ -89,6 +88,63 @@ export default function ProfileSetupForm({
   const [waiverDialogOpen, setWaiverDialogOpen] = useState(false);
   const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const uploadFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (JPEG, PNG, WebP, or GIF).", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload an image under 5MB.", variant: "destructive" });
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/upload/photo", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setProfileImageUrl(data.url);
+      setPhotoDialogOpen(false);
+      toast({ title: "Photo uploaded", description: "Your profile photo has been set." });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [toast]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  }, [uploadFile]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+  }, [uploadFile]);
 
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
@@ -114,6 +170,10 @@ export default function ProfileSetupForm({
     e.preventDefault();
     if (name && location && selectedSport) {
       const profile: any = { name, location, sports: [selectedSport] };
+      
+      if (profileImageUrl) {
+        profile.profileImage = profileImageUrl;
+      }
       
       if (role === "athlete") {
         profile.availableForCoachRequests = availableForCoachRequests;
@@ -151,24 +211,89 @@ export default function ProfileSetupForm({
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="flex flex-col items-center gap-3">
           <Avatar className="w-32 h-32">
-            <AvatarImage
-              src={role === "athlete" ? athleteImage : coachImage}
-              alt={`${role} profile`}
-              className="object-cover"
-            />
+            {profileImageUrl ? (
+              <AvatarImage
+                src={profileImageUrl}
+                alt="Profile photo"
+                className="object-cover"
+              />
+            ) : null}
             <AvatarFallback className="bg-muted">
               <Camera className="w-12 h-12 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            data-testid="button-upload-photo"
-          >
-            <Camera className="w-4 h-4 mr-2" />
-            Upload Photo
-          </Button>
+          <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                data-testid="button-upload-photo"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                {profileImageUrl ? "Change Photo" : "Upload Photo"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Upload Profile Photo</DialogTitle>
+                <DialogDescription>
+                  Drag and drop an image or click to browse. Max 5MB (JPEG, PNG, WebP, GIF).
+                </DialogDescription>
+              </DialogHeader>
+              <div
+                className={`mt-4 border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-primary/50"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="dropzone-photo"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  data-testid="input-photo-file"
+                />
+                {isUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-muted-foreground" data-testid="text-upload-status">Uploading...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <ImagePlus className="w-10 h-10 text-muted-foreground" />
+                    <p className="text-sm font-medium" data-testid="text-dropzone-label">Drop your image here</p>
+                    <p className="text-xs text-muted-foreground">or click to browse</p>
+                  </div>
+                )}
+              </div>
+              {profileImageUrl && (
+                <div className="mt-4 flex items-center gap-3">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={profileImageUrl} alt="Current photo" className="object-cover" />
+                    <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-muted-foreground flex-1">Current photo</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setProfileImageUrl(null)}
+                    data-testid="button-remove-photo"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="space-y-6">

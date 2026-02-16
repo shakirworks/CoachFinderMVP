@@ -1,16 +1,66 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { sendVerificationCode, sendWelcomeVerification } from "./email";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const SERVICE_FEE_PERCENTAGE = 0.07;
 const HST_PERCENTAGE = 0.13;
 
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files (JPEG, PNG, WebP, GIF) are allowed"));
+    }
+  },
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.use("/uploads", express.static(uploadsDir));
+
+  app.post("/api/upload/photo", (req, res) => {
+    upload.single("photo")(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File is too large. Maximum size is 5MB." });
+          }
+          return res.status(400).json({ error: err.message });
+        }
+        return res.status(400).json({ error: err.message || "Upload failed" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const url = `/uploads/${req.file.filename}`;
+      res.json({ url });
+    });
+  });
   // Check if email exists
   app.get("/api/users/exists", async (req, res) => {
     try {
