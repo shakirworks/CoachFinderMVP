@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -73,20 +74,33 @@ export default function CoachOwnProfile() {
     }
   }, []);
 
+  const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
+
   useEffect(() => {
-    const coachData = localStorage.getItem("currentCoach");
-    if (coachData) {
-      const parsedCoach = JSON.parse(coachData);
-      setCoach(parsedCoach);
-      setEditedName(parsedCoach.name || "");
-      setEditedLocation(parsedCoach.location || "");
-      setEditedSport(parsedCoach.sport || "");
-      setEditedBio(parsedCoach.bio || "");
-      setEditedHourlyRate(parsedCoach.hourlyRate?.toString() || "");
+    if (authLoading) return;
+    if (authenticated && authRole === "coach" && authUser) {
+      const coachUser = authUser as Coach;
+      setCoach(coachUser);
+      setEditedName(coachUser.name || "");
+      setEditedLocation(coachUser.location || "");
+      setEditedSport(coachUser.sport || "");
+      setEditedBio(coachUser.bio || "");
+      setEditedHourlyRate(coachUser.hourlyRate?.toString() || "");
     } else {
-      setLocation("/");
+      const coachData = localStorage.getItem("currentCoach");
+      if (coachData) {
+        const parsedCoach = JSON.parse(coachData);
+        setCoach(parsedCoach);
+        setEditedName(parsedCoach.name || "");
+        setEditedLocation(parsedCoach.location || "");
+        setEditedSport(parsedCoach.sport || "");
+        setEditedBio(parsedCoach.bio || "");
+        setEditedHourlyRate(parsedCoach.hourlyRate?.toString() || "");
+      } else {
+        setLocation("/");
+      }
     }
-  }, [setLocation]);
+  }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number }) => {

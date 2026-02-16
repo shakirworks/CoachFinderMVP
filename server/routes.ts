@@ -11,6 +11,14 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    userRole: "athlete" | "coach";
+    userEmail: string;
+  }
+}
+
 const SERVICE_FEE_PERCENTAGE = 0.07;
 const HST_PERCENTAGE = 0.13;
 
@@ -61,7 +69,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ url });
     });
   });
-  // Check if email exists
+  app.get("/api/session", async (req, res) => {
+    if (!req.session.userId || !req.session.userEmail || !req.session.userRole) {
+      return res.json({ authenticated: false });
+    }
+    try {
+      const email = req.session.userEmail;
+      const role = req.session.userRole;
+      let user: any = null;
+      if (role === "athlete") {
+        const athlete = await storage.getAthleteByEmail(email);
+        if (athlete) {
+          const { password: _, ...safe } = athlete;
+          user = safe;
+        }
+      } else if (role === "coach") {
+        const coach = await storage.getCoachByEmail(email);
+        if (coach) {
+          const { password: _, ...safe } = coach;
+          user = safe;
+        }
+      }
+      if (!user) {
+        req.session.destroy(() => {});
+        return res.json({ authenticated: false });
+      }
+      res.json({ authenticated: true, user, role: req.session.userRole });
+    } catch (error: any) {
+      res.json({ authenticated: false });
+    }
+  });
+
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
+  });
+
   app.get("/api/users/exists", async (req, res) => {
     try {
       const email = req.query.email as string;
@@ -189,6 +237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const athleteData = insertAthleteSchema.parse(bodyData);
       const athlete = await storage.createAthlete({ ...athleteData, password: finalPassword });
+
+      req.session.userId = athlete.id;
+      req.session.userRole = "athlete";
+      req.session.userEmail = athlete.email;
+
       const { password: _, ...safeAthlete } = athlete;
       res.json(safeAthlete);
     } catch (error: any) {
@@ -276,6 +329,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const coachData = insertCoachSchema.parse(bodyData);
       const coach = await storage.createCoach({ ...coachData, password: finalPassword });
+
+      req.session.userId = coach.id;
+      req.session.userRole = "coach";
+      req.session.userEmail = coach.email;
+
       const { password: _, ...safeCoach } = coach;
       res.json(safeCoach);
     } catch (error: any) {
@@ -402,6 +460,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
+      req.session.userId = athlete.id;
+      req.session.userRole = "athlete";
+      req.session.userEmail = email;
+
       const { password: _, ...safeAthlete } = athlete;
       res.json(safeAthlete);
     } catch (error: any) {
@@ -409,7 +471,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Login step 2: verify the 5-digit code for coach
   app.post("/api/login/coach/verify", async (req, res) => {
     try {
       const { email, code } = req.body;
@@ -432,6 +493,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!coach) {
         return res.status(404).json({ error: "Coach not found" });
       }
+
+      req.session.userId = coach.id;
+      req.session.userRole = "coach";
+      req.session.userEmail = email;
 
       const { password: _, ...safeCoach } = coach;
       res.json(safeCoach);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -76,18 +77,28 @@ export default function AthleteProfile() {
     enabled: !!athlete?.id,
   });
 
+  const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
+
   useEffect(() => {
-    const athleteData = localStorage.getItem("currentAthlete");
-    if (athleteData) {
-      const parsedAthlete = JSON.parse(athleteData);
-      setAthlete(parsedAthlete);
-      setEditedName(parsedAthlete.name);
-      setEditedLocation(parsedAthlete.location);
-      setEditedSport(parsedAthlete.sport);
+    if (authLoading) return;
+    if (authenticated && authRole === "athlete" && authUser) {
+      setAthlete(authUser as Athlete);
+      setEditedName(authUser.name);
+      setEditedLocation(authUser.location);
+      setEditedSport(authUser.sport);
     } else {
-      setLocation("/");
+      const athleteData = localStorage.getItem("currentAthlete");
+      if (athleteData) {
+        const parsedAthlete = JSON.parse(athleteData);
+        setAthlete(parsedAthlete);
+        setEditedName(parsedAthlete.name);
+        setEditedLocation(parsedAthlete.location);
+        setEditedSport(parsedAthlete.sport);
+      } else {
+        setLocation("/");
+      }
     }
-  }, [setLocation]);
+  }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
     mutationFn: async (updates: { name: string; location: string; sport: string }) => {

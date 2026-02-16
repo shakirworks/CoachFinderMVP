@@ -38,7 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Password Security**: bcrypt hashing (10 rounds), passwords never returned in API responses.
 - **Email Verification**: Verification tokens (UUID) stored in `verification_codes` table with type="signup", role, and hashed password. Token marked as used after account creation.
 - **Email Service**: Nodemailer with SMTP (support@coachfinders.ca), sends welcome verification emails and login codes.
-- **State Management**: localStorage for user sessions (MVP), ready for session-based auth upgrade.
+- **Session Management**: Server-side sessions via `express-session` with `connect-pg-simple` (PostgreSQL store). 30-minute rolling timeout with inactivity warning dialog at 28 minutes. Sessions created on login verification and signup. AuthProvider context (`client/src/contexts/AuthContext.tsx`) manages auth state app-wide, syncing with server sessions and localStorage fallback. Profile pages consume AuthContext as primary source.
 
 ## External Dependencies
 

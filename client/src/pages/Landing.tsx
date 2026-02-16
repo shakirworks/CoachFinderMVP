@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import RoleSelectionCard from "@/components/RoleSelectionCard";
 import EmailSignupForm from "@/components/EmailSignupForm";
@@ -24,6 +25,7 @@ export default function Landing() {
   const [signupEmailSent, setSignupEmailSent] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { setUserLocally } = useAuth();
 
   const sendVerificationMutation = useMutation({
     mutationFn: async ({ email: signupEmail, password: signupPassword, role: signupRole }: { email: string; password: string; role: string }) => {
@@ -105,14 +107,14 @@ export default function Landing() {
     },
     onSuccess: (data: Athlete | Coach) => {
       if (role === "athlete") {
-        localStorage.setItem("currentAthlete", JSON.stringify(data));
+        setUserLocally(data, "athlete");
         toast({
           title: "Welcome back!",
           description: "Redirecting you to coaches list...",
         });
         setLocation("/coaches");
       } else {
-        localStorage.setItem("currentCoach", JSON.stringify(data));
+        setUserLocally(data, "coach");
         toast({
           title: "Welcome back!",
           description: "Redirecting you to your profile...",

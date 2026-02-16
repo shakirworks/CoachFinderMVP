@@ -2,16 +2,19 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair, Menu, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar, MessageSquare, TrendingUp, Users, Award, Mail, Heart, Shield, Globe, Crosshair, Menu, X, User, LogOut } from "lucide-react";
 import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.avif";
 import coachingImage from "@assets/premium_photo-1683133666522-15d8b06501b3_1771128470313.avif";
 import athleteImage from "@assets/photo-1711066444066-c7edf6ee7092_1771128881958.avif";
 import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
 import badgeImage from "@assets/Gemini_Generated_Image_weahysweahysweah_1771129690200.png";
 import SiteFooter from "@/components/SiteFooter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { authenticated, user, role, loading, logout } = useAuth();
 
   const scrollToSection = (id: string) => {
     const section = document.getElementById(id);
@@ -34,12 +37,35 @@ export default function Home() {
             <Button variant="ghost" onClick={() => scrollToSection("feedback")} data-testid="button-feedback-nav">
               Feedback
             </Button>
-            <Link href="/signup?mode=signin">
-              <Button variant="ghost" data-testid="button-signin">Sign In</Button>
-            </Link>
-            <Link href="/signup">
-              <Button data-testid="button-getstarted-header">Get Started</Button>
-            </Link>
+            {!loading && authenticated && user ? (
+              <>
+                <Link href={role === "athlete" ? "/coaches" : "/coach-profile"}>
+                  <Button variant="ghost" data-testid="button-dashboard-nav">
+                    {role === "athlete" ? "Browse Coaches" : "My Dashboard"}
+                  </Button>
+                </Link>
+                <Link href={role === "athlete" ? "/profile" : "/coach-profile"}>
+                  <Avatar className="h-9 w-9 cursor-pointer" data-testid="avatar-profile-nav">
+                    <AvatarImage src={(user as any).profileImage || undefined} alt={user.name} className="object-cover" />
+                    <AvatarFallback className="text-xs">
+                      {user.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || <User className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={logout} data-testid="button-logout">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
+            ) : !loading ? (
+              <>
+                <Link href="/signup?mode=signin">
+                  <Button variant="ghost" data-testid="button-signin">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button data-testid="button-getstarted-header">Get Started</Button>
+                </Link>
+              </>
+            ) : null}
           </div>
           <Button
             variant="ghost"
@@ -61,12 +87,39 @@ export default function Home() {
             <Button variant="ghost" className="justify-start" onClick={() => scrollToSection("feedback")} data-testid="button-feedback-nav-mobile">
               Feedback
             </Button>
-            <Link href="/signup?mode=signin">
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="button-signin-mobile">Sign In</Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="w-full" onClick={() => setMobileMenuOpen(false)} data-testid="button-getstarted-mobile">Get Started</Button>
-            </Link>
+            {!loading && authenticated && user ? (
+              <>
+                <Link href={role === "athlete" ? "/profile" : "/coach-profile"}>
+                  <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setMobileMenuOpen(false)} data-testid="button-profile-mobile">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={(user as any).profileImage || undefined} alt={user.name} className="object-cover" />
+                      <AvatarFallback className="text-[10px]">
+                        {user.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || <User className="w-3 h-3" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    My Profile
+                  </Button>
+                </Link>
+                <Link href={role === "athlete" ? "/coaches" : "/coach-profile"}>
+                  <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="button-dashboard-mobile">
+                    {role === "athlete" ? "Browse Coaches" : "My Dashboard"}
+                  </Button>
+                </Link>
+                <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => { setMobileMenuOpen(false); logout(); }} data-testid="button-logout-mobile">
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : !loading ? (
+              <>
+                <Link href="/signup?mode=signin">
+                  <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)} data-testid="button-signin-mobile">Sign In</Button>
+                </Link>
+                <Link href="/signup">
+                  <Button className="w-full" onClick={() => setMobileMenuOpen(false)} data-testid="button-getstarted-mobile">Get Started</Button>
+                </Link>
+              </>
+            ) : null}
           </nav>
         </div>
       </header>
@@ -95,15 +148,27 @@ export default function Home() {
             and elevate your athletic performance to the next level.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/signup">
-              <Button 
-                size="lg" 
-                className="rounded-full backdrop-blur-sm bg-white text-black border-white"
-                data-testid="button-getstarted-hero"
-              >
-                Get Started
-              </Button>
-            </Link>
+            {authenticated ? (
+              <Link href={role === "athlete" ? "/coaches" : "/coach-profile"}>
+                <Button 
+                  size="lg" 
+                  className="rounded-full backdrop-blur-sm bg-white text-black border-white"
+                  data-testid="button-goto-dashboard-hero"
+                >
+                  {role === "athlete" ? "Browse Coaches" : "Go to Dashboard"}
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/signup">
+                <Button 
+                  size="lg" 
+                  className="rounded-full backdrop-blur-sm bg-white text-black border-white"
+                  data-testid="button-getstarted-hero"
+                >
+                  Get Started
+                </Button>
+              </Link>
+            )}
             <Button 
               size="lg" 
               variant="outline" 

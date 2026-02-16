@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useSearch, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import ProfileSetupForm from "@/components/ProfileSetupForm";
 import type { Athlete, Coach } from "@shared/schema";
@@ -14,6 +15,7 @@ export default function ProfileSetup() {
 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { setUserLocally } = useAuth();
 
   const createAthleteMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
@@ -21,7 +23,7 @@ export default function ProfileSetup() {
       return await res.json();
     },
     onSuccess: (athlete: Athlete) => {
-      localStorage.setItem("currentAthlete", JSON.stringify(athlete));
+      setUserLocally(athlete, "athlete");
       toast({
         title: "Profile created!",
         description: "Welcome! Browse our coaches below.",
@@ -43,7 +45,7 @@ export default function ProfileSetup() {
       return await res.json();
     },
     onSuccess: (coach: Coach) => {
-      localStorage.setItem("currentCoach", JSON.stringify(coach));
+      setUserLocally(coach, "coach");
       toast({
         title: "Profile created!",
         description: "Your coach profile is now live.",

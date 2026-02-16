@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,12 +40,19 @@ export default function CoachesList() {
   const [maxRate, setMaxRate] = useState("");
   const [, setLocation] = useLocation();
 
+  const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
+
   useEffect(() => {
-    const athleteData = localStorage.getItem("currentAthlete");
-    if (athleteData) {
-      setAthlete(JSON.parse(athleteData));
+    if (authLoading) return;
+    if (authenticated && authRole === "athlete" && authUser) {
+      setAthlete(authUser as Athlete);
+    } else {
+      const athleteData = localStorage.getItem("currentAthlete");
+      if (athleteData) {
+        setAthlete(JSON.parse(athleteData));
+      }
     }
-  }, []);
+  }, [authLoading, authenticated, authUser, authRole]);
 
   const { data: coaches, isLoading } = useQuery<Coach[]>({
     queryKey: ["/api/coaches"],
