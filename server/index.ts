@@ -1,57 +1,43 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { runMigrations } from 'stripe-replit-sync';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { getStripeSync } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 
 const app = express();
 
 async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
 
-  if (!databaseUrl) {
-    console.warn('DATABASE_URL not found - Stripe integration will be limited');
+  if (!secretKey || !publishableKey) {
+    console.warn('Stripe keys not configured - Stripe features will be unavailable');
     return;
   }
 
   try {
-    console.log('Initializing Stripe schema...');
-    await runMigrations({ databaseUrl });
-    console.log('Stripe schema ready');
-
-    const stripeSync = await getStripeSync();
-
-    console.log('Setting up managed webhook...');
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-    const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`,
-      {
-        enabled_events: ['*'],
-        description: 'Managed webhook for CoachFinders Stripe sync',
-      }
-    );
-    console.log(`Webhook configured: ${webhook.url} (UUID: ${uuid})`);
-
-    console.log('Syncing Stripe data...');
-    stripeSync.syncBackfill()
-      .then(() => {
-        console.log('Stripe data synced');
-      })
-      .catch((err: any) => {
-        console.error('Error syncing Stripe data:', err);
-      });
-  } catch (error) {
-    console.error('Failed to initialize Stripe:', error);
+    const stripe = new (await import('stripe')).default(secretKey, {
+      apiVersion: '2025-11-17.clover' as any,
+    });
+    const account = await stripe.accounts.retrieve();
+    console.log(`Stripe connected successfully (account: ${account.id})`);
+    
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      const webhookUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/stripe/webhook`;
+      console.warn(`STRIPE_WEBHOOK_SECRET not set. Create a webhook in Stripe Dashboard pointing to: ${webhookUrl}`);
+      console.warn('Events needed: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, account.updated');
+    }
+  } catch (error: any) {
+    console.error('Stripe connection check failed:', error.message);
+    console.warn('Stripe features may not work correctly. Check your API keys.');
   }
 }
 
 initStripe().catch(console.error);
 
 app.post(
-  '/api/stripe/webhook/:uuid',
+  '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
   async (req, res) => {
     const signature = req.headers['stripe-signature'];
@@ -64,14 +50,11 @@ app.post(
       const sig = Array.isArray(signature) ? signature[0] : signature;
 
       if (!Buffer.isBuffer(req.body)) {
-        const errorMsg = 'STRIPE WEBHOOK ERROR: req.body is not a Buffer. ' +
-          'This means express.json() ran before this webhook route.';
-        console.error(errorMsg);
+        console.error('STRIPE WEBHOOK ERROR: req.body is not a Buffer.');
         return res.status(500).json({ error: 'Webhook processing error' });
       }
 
-      const { uuid } = req.params;
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig, uuid);
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
 
       res.status(200).json({ received: true });
     } catch (error: any) {

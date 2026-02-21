@@ -1,4 +1,4 @@
-import { getStripeSync, getUncachableStripeClient } from './stripeClient';
+import { getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import Stripe from 'stripe';
 
@@ -134,6 +134,24 @@ async function handlePaymentFailed(sessionId: string): Promise<void> {
   console.log(`Marked purchase ${purchaseId} as failed`);
 }
 
+async function handleAccountUpdated(account: Stripe.Account): Promise<void> {
+  console.log(`Handling account update for ${account.id}`);
+  
+  const coachId = account.metadata?.coachId;
+  if (!coachId) {
+    console.log(`No coachId in account ${account.id} metadata, skipping`);
+    return;
+  }
+
+  const onboardingComplete = account.charges_enabled && account.payouts_enabled;
+  await storage.updateCoach(coachId, {
+    stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
+    stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
+  });
+  
+  console.log(`Updated coach ${coachId} Stripe status: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
+}
+
 async function handleSessionExpired(sessionId: string): Promise<void> {
   console.log(`Handling expired session ${sessionId}`);
   
@@ -155,7 +173,7 @@ async function handleSessionExpired(sessionId: string): Promise<void> {
 }
 
 export class WebhookHandlers {
-  static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
+  static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
         'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
@@ -165,28 +183,42 @@ export class WebhookHandlers {
       );
     }
 
-    const sync = await getStripeSync();
-    
-    const event = JSON.parse(payload.toString()) as Stripe.Event;
+    const stripe = await getUncachableStripeClient();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event: Stripe.Event;
+
+    if (!webhookSecret) {
+      throw new Error(
+        'STRIPE_WEBHOOK_SECRET is not set. Webhook signature verification cannot be skipped. ' +
+        'Set the STRIPE_WEBHOOK_SECRET environment variable from your Stripe Dashboard webhook settings.'
+      );
+    }
+
+    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
     
     switch (event.type) {
       case 'checkout.session.completed':
-      case 'checkout.session.async_payment_succeeded':
+      case 'checkout.session.async_payment_succeeded': {
         const completedSession = event.data.object as Stripe.Checkout.Session;
         await fulfillCheckout(completedSession.id);
         break;
-        
-      case 'checkout.session.async_payment_failed':
+      }
+      case 'checkout.session.async_payment_failed': {
         const failedSession = event.data.object as Stripe.Checkout.Session;
         await handlePaymentFailed(failedSession.id);
         break;
-        
-      case 'checkout.session.expired':
+      }
+      case 'checkout.session.expired': {
         const expiredSession = event.data.object as Stripe.Checkout.Session;
         await handleSessionExpired(expiredSession.id);
         break;
+      }
+      case 'account.updated': {
+        const account = event.data.object as Stripe.Account;
+        await handleAccountUpdated(account);
+        break;
+      }
     }
-    
-    await sync.processWebhook(payload, signature, uuid);
   }
 }
