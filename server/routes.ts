@@ -795,6 +795,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ url: accountLink.url, accountId: account.id });
     } catch (error: any) {
       console.error('Stripe Connect error:', error);
+      if (error.type === 'StripeInvalidRequestError' && error.message?.includes('signed up for Connect')) {
+        return res.status(503).json({ 
+          error: "Stripe Connect is not yet enabled on the platform account. The platform administrator needs to activate Stripe Connect at https://dashboard.stripe.com/connect/overview before coaches can connect their accounts." 
+        });
+      }
       res.status(500).json({ error: error.message });
     }
   });

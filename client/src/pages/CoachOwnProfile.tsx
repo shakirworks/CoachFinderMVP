@@ -137,9 +137,12 @@ export default function CoachOwnProfile() {
       }
     },
     onError: (error: Error) => {
+      const msg = error.message?.includes('signed up for Connect') || error.message?.includes('not yet enabled')
+        ? "Stripe Connect is being set up for this platform. Please try again later or contact support."
+        : error.message || "Unable to connect with Stripe. Please try again.";
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Cannot connect with Stripe",
+        description: msg,
         variant: "destructive",
       });
     },
