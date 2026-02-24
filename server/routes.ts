@@ -737,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Stripe Connect account for coach using V2 Accounts API
+  // Create Stripe Connect account for coach (V2 first, V1 fallback)
   app.post("/api/coaches/:coachId/stripe/connect", async (req, res) => {
     try {
       const { coachId } = req.params;
@@ -755,45 +755,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
 
       let accountId = coach.stripeAccountId;
+      let isV2Account = false;
 
       if (!accountId) {
-        const v2Headers = {
-          additionalHeaders: {
-            'Stripe-Version': '2025-12-15.preview',
-          },
-        };
-
-        const account = await stripe.rawRequest('POST', '/v2/core/accounts', {
-          display_name: coach.name,
-          contact_email: coach.email,
-          identity: {
-            country: 'ca',
-          },
-          dashboard: 'full',
-          defaults: {
-            responsibilities: {
-              fees_collector: 'stripe',
-              losses_collector: 'stripe',
+        // Try V2 API first, fall back to V1 if V2 isn't enabled
+        try {
+          const v2Headers = {
+            additionalHeaders: {
+              'Stripe-Version': '2025-12-15.preview',
             },
-          },
-          configuration: {
-            customer: {},
-            merchant: {
-              capabilities: {
-                card_payments: {
-                  requested: true,
+          };
+
+          const account = await stripe.rawRequest('POST', '/v2/core/accounts', {
+            display_name: coach.name,
+            contact_email: coach.email,
+            identity: {
+              country: 'ca',
+            },
+            dashboard: 'full',
+            defaults: {
+              responsibilities: {
+                fees_collector: 'stripe',
+                losses_collector: 'stripe',
+              },
+            },
+            configuration: {
+              customer: {},
+              merchant: {
+                capabilities: {
+                  card_payments: {
+                    requested: true,
+                  },
                 },
               },
             },
-          },
-          metadata: {
-            coachId: coach.id,
-            coachName: coach.name,
-          },
-        }, v2Headers);
+            metadata: {
+              coachId: coach.id,
+              coachName: coach.name,
+            },
+          }, v2Headers);
 
-        const accountData = account as any;
-        accountId = accountData.id;
+          const accountData = account as any;
+          accountId = accountData.id;
+          isV2Account = true;
+          console.log(`Created V2 Connect account ${accountId} for coach ${coachId}`);
+        } catch (v2Error: any) {
+          console.log(`V2 account creation not available (${v2Error.message}), falling back to V1`);
+          
+          const account = await stripe.accounts.create({
+            type: 'express',
+            country: 'CA',
+            email: coach.email,
+            capabilities: {
+              card_payments: { requested: true },
+              transfers: { requested: true },
+            },
+            business_type: 'individual',
+            metadata: {
+              coachId: coach.id,
+              coachName: coach.name,
+            },
+          });
+
+          accountId = account.id;
+          isV2Account = false;
+          console.log(`Created V1 Connect account ${accountId} for coach ${coachId}`);
+        }
 
         await storage.updateCoach(coachId, {
           stripeAccountId: accountId,
@@ -802,26 +829,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const v2LinkHeaders = {
-        additionalHeaders: {
-          'Stripe-Version': '2025-12-15.preview',
-        },
-      };
+      // Create account link - try V2 first, fall back to V1
+      let onboardingUrl: string;
 
-      const accountLinkResponse = await stripe.rawRequest('POST', '/v2/core/account_links', {
-        account: accountId,
-        use_case: {
-          type: 'account_onboarding',
-          account_onboarding: {
-            configurations: ['merchant', 'customer'],
-            refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
-            return_url: `${baseUrl}/coach-profile?stripe=success&accountId=${accountId}`,
+      try {
+        const v2LinkHeaders = {
+          additionalHeaders: {
+            'Stripe-Version': '2025-12-15.preview',
           },
-        },
-      }, v2LinkHeaders);
+        };
 
-      const linkData = accountLinkResponse as any;
-      res.json({ url: linkData.url, accountId });
+        const accountLinkResponse = await stripe.rawRequest('POST', '/v2/core/account_links', {
+          account: accountId,
+          use_case: {
+            type: 'account_onboarding',
+            account_onboarding: {
+              configurations: ['merchant', 'customer'],
+              refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
+              return_url: `${baseUrl}/coach-profile?stripe=success&accountId=${accountId}`,
+            },
+          },
+        }, v2LinkHeaders);
+
+        const linkData = accountLinkResponse as any;
+        onboardingUrl = linkData.url;
+      } catch (v2LinkError: any) {
+        console.log(`V2 account link not available, using V1 account links`);
+        const accountLink = await stripe.accountLinks.create({
+          account: accountId!,
+          refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
+          return_url: `${baseUrl}/coach-profile?stripe=success`,
+          type: 'account_onboarding',
+        });
+        onboardingUrl = accountLink.url;
+      }
+
+      res.json({ url: onboardingUrl, accountId });
     } catch (error: any) {
       console.error('Stripe Connect error:', error);
       if (error.type === 'StripeInvalidRequestError' && error.message?.includes('signed up for Connect')) {
