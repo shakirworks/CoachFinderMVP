@@ -17,16 +17,14 @@ async function initStripe() {
   }
 
   try {
-    const stripe = new (await import('stripe')).default(secretKey, {
-      apiVersion: '2025-11-17.clover' as any,
-    });
+    const stripe = new (await import('stripe')).default(secretKey);
     const account = await stripe.accounts.retrieve();
     console.log(`Stripe connected successfully (account: ${account.id})`);
     
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       const webhookUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/stripe/webhook`;
       console.warn(`STRIPE_WEBHOOK_SECRET not set. Create a webhook in Stripe Dashboard pointing to: ${webhookUrl}`);
-      console.warn('Events needed: checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, account.updated');
+      console.warn('Events needed: checkout.session.*, account.updated, v2.core.account.*');
     }
   } catch (error: any) {
     console.error('Stripe connection check failed:', error.message);
@@ -36,6 +34,7 @@ async function initStripe() {
 
 initStripe().catch(console.error);
 
+// V1 webhook endpoint for checkout and legacy account events
 app.post(
   '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
@@ -59,6 +58,35 @@ app.post(
       res.status(200).json({ received: true });
     } catch (error: any) {
       console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
+
+// V2 thin events webhook endpoint for Connect account updates
+app.post(
+  '/api/stripe/webhook/v2',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('V2 WEBHOOK ERROR: req.body is not a Buffer.');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      await WebhookHandlers.processV2ThinEvent(req.body as Buffer, sig);
+
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('V2 Webhook error:', error.message);
       res.status(400).json({ error: 'Webhook processing error' });
     }
   }

@@ -33,14 +33,12 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     return;
   }
   
-  // Update purchase status
   await storage.updatePurchaseStatus(
     purchaseId,
     'succeeded',
     session.payment_intent as string
   );
   
-  // Get athlete and coach details for invoice
   const athlete = await storage.getAthlete(purchase.athleteId);
   const coach = await storage.getCoach(purchase.coachId);
   
@@ -49,7 +47,6 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     return;
   }
   
-  // Parse selected slots from purchase
   const selectedSlots = purchase.selectedSlots as Array<{
     slotId: string;
     date: string;
@@ -83,12 +80,10 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     },
   });
   
-  // Block the booked slots by deleting them from availability
   const slotIds = selectedSlots.map(slot => slot.slotId);
   await storage.deleteAvailabilitySlotsByIds(slotIds);
   console.log(`Blocked ${slotIds.length} slots for coach ${purchase.coachId}`);
   
-  // Create notification for the coach
   const sessionCount = selectedSlots.length;
   const coachAmount = ((purchase.subtotal) / 100).toFixed(2);
   
@@ -134,24 +129,6 @@ async function handlePaymentFailed(sessionId: string): Promise<void> {
   console.log(`Marked purchase ${purchaseId} as failed`);
 }
 
-async function handleAccountUpdated(account: Stripe.Account): Promise<void> {
-  console.log(`Handling account update for ${account.id}`);
-  
-  const coachId = account.metadata?.coachId;
-  if (!coachId) {
-    console.log(`No coachId in account ${account.id} metadata, skipping`);
-    return;
-  }
-
-  const onboardingComplete = account.charges_enabled && account.payouts_enabled;
-  await storage.updateCoach(coachId, {
-    stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
-    stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
-  });
-  
-  console.log(`Updated coach ${coachId} Stripe status: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
-}
-
 async function handleSessionExpired(sessionId: string): Promise<void> {
   console.log(`Handling expired session ${sessionId}`);
   
@@ -172,21 +149,78 @@ async function handleSessionExpired(sessionId: string): Promise<void> {
   console.log(`Marked purchase ${purchaseId} as cancelled due to session expiry`);
 }
 
+async function handleV2AccountUpdate(accountId: string): Promise<void> {
+  console.log(`Handling V2 account update for ${accountId}`);
+  
+  const stripe = await getUncachableStripeClient();
+  
+  try {
+    const accountResponse = await stripe.rawRequest(
+      'GET',
+      `/v2/core/accounts/${accountId}?include[]=configuration.merchant&include[]=requirements`,
+      undefined,
+      {
+        additionalHeaders: {
+          'Stripe-Version': '2025-12-15.preview',
+        },
+      }
+    );
+    
+    const account = accountResponse as any;
+    const coachId = account?.metadata?.coachId;
+    
+    if (!coachId) {
+      console.log(`No coachId in V2 account ${accountId} metadata, skipping`);
+      return;
+    }
+    
+    const cardPaymentsStatus = account?.configuration?.merchant?.capabilities?.card_payments?.status;
+    const chargesEnabled = cardPaymentsStatus === 'active';
+    const requirementsStatus = account?.requirements?.summary?.minimum_deadline?.status;
+    const onboardingComplete = requirementsStatus !== 'currently_due' && requirementsStatus !== 'past_due';
+    
+    await storage.updateCoach(coachId, {
+      stripeAccountStatus: chargesEnabled ? 'active' : 'pending',
+      stripeOnboardingComplete: (chargesEnabled && onboardingComplete) ? 'true' : 'false',
+    });
+    
+    console.log(`Updated coach ${coachId} from V2 event: charges=${chargesEnabled}, onboarding=${onboardingComplete}`);
+  } catch (error: any) {
+    console.error(`Error handling V2 account update for ${accountId}:`, error.message);
+  }
+}
+
+async function handleV1AccountUpdate(account: Stripe.Account): Promise<void> {
+  console.log(`Handling V1 account update for ${account.id}`);
+  
+  const coachId = account.metadata?.coachId;
+  if (!coachId) {
+    console.log(`No coachId in account ${account.id} metadata, skipping`);
+    return;
+  }
+
+  const onboardingComplete = account.charges_enabled && account.payouts_enabled;
+  await storage.updateCoach(coachId, {
+    stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
+    stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
+  });
+  
+  console.log(`Updated coach ${coachId} V1 status: charges=${account.charges_enabled}, payouts=${account.payouts_enabled}`);
+}
+
 export class WebhookHandlers {
+  // Handle V1 webhook events (checkout, account.updated)
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
         'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
         'Received type: ' + typeof payload + '. ' +
-        'This usually means express.json() parsed the body before reaching this handler. ' +
         'FIX: Ensure webhook route is registered BEFORE app.use(express.json()).'
       );
     }
 
     const stripe = await getUncachableStripeClient();
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    let event: Stripe.Event;
 
     if (!webhookSecret) {
       throw new Error(
@@ -195,7 +229,9 @@ export class WebhookHandlers {
       );
     }
 
-    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    
+    console.log(`Received webhook event: ${event.type}`);
     
     switch (event.type) {
       case 'checkout.session.completed':
@@ -216,8 +252,41 @@ export class WebhookHandlers {
       }
       case 'account.updated': {
         const account = event.data.object as Stripe.Account;
-        await handleAccountUpdated(account);
+        await handleV1AccountUpdate(account);
         break;
+      }
+    }
+  }
+
+  static async processV2ThinEvent(payload: Buffer, signature: string): Promise<void> {
+    if (!Buffer.isBuffer(payload)) {
+      throw new Error('V2 webhook payload must be a Buffer.');
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_V2 || process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      throw new Error('Webhook secret not configured for V2 events.');
+    }
+
+    // Verify signature using the same constructEvent method (works for V2 thin events too)
+    const verifiedEvent = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    
+    console.log(`Received V2 thin event: ${verifiedEvent.type}`);
+
+    const eventType = verifiedEvent.type;
+
+    if (
+      eventType === 'v2.core.account[requirements].updated' ||
+      eventType === 'v2.core.account[configuration.merchant].capability_status_updated' ||
+      eventType === 'v2.core.account[configuration.customer].capability_status_updated' ||
+      eventType === 'account.updated'
+    ) {
+      const eventData = verifiedEvent as any;
+      const accountId = eventData.related_object?.id || eventData.data?.object?.id || eventData.account;
+      if (accountId) {
+        await handleV2AccountUpdate(accountId);
       }
     }
   }

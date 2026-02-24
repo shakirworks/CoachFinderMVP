@@ -737,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Stripe Connect account for coach
+  // Create Stripe Connect account for coach using V2 Accounts API
   app.post("/api/coaches/:coachId/stripe/connect", async (req, res) => {
     try {
       const { coachId } = req.params;
@@ -754,45 +754,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const origin = req.get("origin");
       const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
 
-      if (coach.stripeAccountId) {
-        const accountLink = await stripe.accountLinks.create({
-          account: coach.stripeAccountId,
-          refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
-          return_url: `${baseUrl}/coach-profile?stripe=success`,
-          type: 'account_onboarding',
+      let accountId = coach.stripeAccountId;
+
+      if (!accountId) {
+        const v2Headers = {
+          additionalHeaders: {
+            'Stripe-Version': '2025-12-15.preview',
+          },
+        };
+
+        const account = await stripe.rawRequest('POST', '/v2/core/accounts', {
+          display_name: coach.name,
+          contact_email: coach.email,
+          identity: {
+            country: 'ca',
+          },
+          dashboard: 'full',
+          defaults: {
+            responsibilities: {
+              fees_collector: 'stripe',
+              losses_collector: 'stripe',
+            },
+          },
+          configuration: {
+            customer: {},
+            merchant: {
+              capabilities: {
+                card_payments: {
+                  requested: true,
+                },
+              },
+            },
+          },
+          metadata: {
+            coachId: coach.id,
+            coachName: coach.name,
+          },
+        }, v2Headers);
+
+        const accountData = account as any;
+        accountId = accountData.id;
+
+        await storage.updateCoach(coachId, {
+          stripeAccountId: accountId,
+          stripeAccountStatus: 'pending',
+          stripeOnboardingComplete: 'false',
         });
-        return res.json({ url: accountLink.url, accountId: coach.stripeAccountId });
       }
 
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'CA',
-        email: coach.email,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
+      const v2LinkHeaders = {
+        additionalHeaders: {
+          'Stripe-Version': '2025-12-15.preview',
         },
-        business_type: 'individual',
-        metadata: {
-          coachId: coach.id,
-          coachName: coach.name,
+      };
+
+      const accountLinkResponse = await stripe.rawRequest('POST', '/v2/core/account_links', {
+        account: accountId,
+        use_case: {
+          type: 'account_onboarding',
+          account_onboarding: {
+            configurations: ['merchant', 'customer'],
+            refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
+            return_url: `${baseUrl}/coach-profile?stripe=success&accountId=${accountId}`,
+          },
         },
-      });
+      }, v2LinkHeaders);
 
-      await storage.updateCoach(coachId, {
-        stripeAccountId: account.id,
-        stripeAccountStatus: 'pending',
-        stripeOnboardingComplete: 'false',
-      });
-
-      const accountLink = await stripe.accountLinks.create({
-        account: account.id,
-        refresh_url: `${baseUrl}/coach-profile?stripe=refresh`,
-        return_url: `${baseUrl}/coach-profile?stripe=success`,
-        type: 'account_onboarding',
-      });
-
-      res.json({ url: accountLink.url, accountId: account.id });
+      const linkData = accountLinkResponse as any;
+      res.json({ url: linkData.url, accountId });
     } catch (error: any) {
       console.error('Stripe Connect error:', error);
       if (error.type === 'StripeInvalidRequestError' && error.message?.includes('signed up for Connect')) {
@@ -800,11 +829,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Stripe Connect is not yet enabled on the platform account. The platform administrator needs to activate Stripe Connect at https://dashboard.stripe.com/connect/overview before coaches can connect their accounts." 
         });
       }
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || "Failed to connect with Stripe" });
     }
   });
 
-  // Get coach's Stripe account status
+  // Get coach's Stripe account status using V2 API
   app.get("/api/coaches/:coachId/stripe/status", async (req, res) => {
     try {
       const { coachId } = req.params;
@@ -824,21 +853,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stripe = await getUncachableStripeClient();
-      const account = await stripe.accounts.retrieve(coach.stripeAccountId);
+      const stripeAccountId = coach.stripeAccountId!;
 
-      // Update coach record with latest status
-      const onboardingComplete = account.charges_enabled && account.payouts_enabled;
+      // Try V2 API first, then fall back to V1 for legacy accounts
+      let chargesEnabled = false;
+      let onboardingComplete = false;
+
+      try {
+        const accountResponse = await stripe.rawRequest(
+          'GET',
+          `/v2/core/accounts/${stripeAccountId}?include[]=configuration.merchant&include[]=requirements`,
+          undefined,
+          {
+            additionalHeaders: {
+              'Stripe-Version': '2025-12-15.preview',
+            },
+          }
+        );
+
+        const account = accountResponse as any;
+        const cardPaymentsStatus = account?.configuration?.merchant?.capabilities?.card_payments?.status;
+        chargesEnabled = cardPaymentsStatus === 'active';
+        const requirementsStatus = account?.requirements?.summary?.minimum_deadline?.status;
+        onboardingComplete = requirementsStatus !== 'currently_due' && requirementsStatus !== 'past_due';
+      } catch (v2Error: any) {
+        // Fallback to V1 API for legacy accounts
+        const account = await stripe.accounts.retrieve(stripeAccountId);
+        chargesEnabled = !!account.charges_enabled;
+        onboardingComplete = !!(account.charges_enabled && account.payouts_enabled);
+      }
+
       await storage.updateCoach(coachId, {
-        stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
-        stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
+        stripeAccountStatus: chargesEnabled ? 'active' : 'pending',
+        stripeOnboardingComplete: (chargesEnabled && onboardingComplete) ? 'true' : 'false',
       });
 
       res.json({
         connected: true,
-        onboardingComplete,
-        chargesEnabled: account.charges_enabled,
-        payoutsEnabled: account.payouts_enabled,
-        accountId: coach.stripeAccountId,
+        onboardingComplete: chargesEnabled && onboardingComplete,
+        chargesEnabled,
+        payoutsEnabled: chargesEnabled,
+        accountId: stripeAccountId,
       });
     } catch (error: any) {
       console.error('Stripe status error:', error);
@@ -846,7 +901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Stripe login link for coach dashboard
+  // Create Stripe dashboard link for coach
   app.post("/api/coaches/:coachId/stripe/dashboard", async (req, res) => {
     try {
       const { coachId } = req.params;
