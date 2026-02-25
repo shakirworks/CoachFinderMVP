@@ -944,6 +944,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Account Session for embedded onboarding components
+  app.post("/api/coaches/:coachId/stripe/account-session", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+
+      if (!coach.stripeAccountId) {
+        return res.status(400).json({ error: "No Stripe account exists yet. Please initiate Connect first." });
+      }
+
+      const stripe = await getUncachableStripeClient();
+
+      const accountSession = await stripe.accountSessions.create({
+        account: coach.stripeAccountId,
+        components: {
+          account_onboarding: {
+            enabled: true,
+          },
+        },
+      });
+
+      res.json({ clientSecret: accountSession.client_secret });
+    } catch (error: any) {
+      console.error('Account session error:', error);
+      res.status(500).json({ error: error.message || "Failed to create account session" });
+    }
+  });
+
   // Create Stripe dashboard link for coach
   app.post("/api/coaches/:coachId/stripe/dashboard", async (req, res) => {
     try {

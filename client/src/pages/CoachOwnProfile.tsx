@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,6 +45,11 @@ import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/sch
 import { formatDistanceToNow } from "date-fns";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
+import {
+  ConnectComponentsProvider,
+  ConnectAccountOnboarding,
+} from "@stripe/react-connect-js";
+import { loadConnectAndInitialize } from "@stripe/connect-js";
 
 export default function CoachOwnProfile() {
   const [coach, setCoach] = useState<Coach | null>(null);
@@ -59,6 +64,8 @@ export default function CoachOwnProfile() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('availability');
   const { toast } = useToast();
+  const [showEmbeddedOnboarding, setShowEmbeddedOnboarding] = useState(false);
+  const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -126,14 +133,49 @@ export default function CoachOwnProfile() {
     },
   });
 
+  const initEmbeddedOnboarding = useCallback(async (coachId: string) => {
+    try {
+      const configRes = await fetch("/api/stripe/config");
+      const configData = await configRes.json();
+      if (!configData.publishableKey) {
+        throw new Error("Stripe is not configured");
+      }
+
+      const instance = loadConnectAndInitialize({
+        publishableKey: configData.publishableKey,
+        fetchClientSecret: async () => {
+          const res = await apiRequest("POST", `/api/coaches/${coachId}/stripe/account-session`, {});
+          const data = await res.json();
+          return data.clientSecret;
+        },
+        appearance: {
+          overlays: "dialog",
+          variables: {
+            colorPrimary: "#2d6a4f",
+          },
+        },
+      });
+
+      setStripeConnectInstance(instance);
+      setShowEmbeddedOnboarding(true);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to load onboarding",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
   const stripeOnboardingMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/coaches/${coach!.id}/stripe/connect`, {});
       return await res.json();
     },
     onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.accountId) {
+        setCoach(prev => prev ? { ...prev, stripeAccountId: data.accountId, stripeAccountStatus: 'pending', stripeOnboardingComplete: 'false' } : prev);
+        initEmbeddedOnboarding(coach!.id);
       }
     },
     onError: (error: Error) => {
@@ -416,6 +458,47 @@ export default function CoachOwnProfile() {
                         </p>
                       </div>
                     </div>
+                  ) : showEmbeddedOnboarding && stripeConnectInstance ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-blue-700 dark:text-blue-300">Complete Your Account Setup</p>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">
+                            Fill in the details below to start receiving payments. All information stays secure with Stripe.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border p-4" data-testid="stripe-embedded-onboarding">
+                        <ConnectComponentsProvider connectInstance={stripeConnectInstance}>
+                          <ConnectAccountOnboarding
+                            onExit={() => {
+                              setShowEmbeddedOnboarding(false);
+                              setStripeConnectInstance(null);
+                              const fetchStatus = async () => {
+                                try {
+                                  const statusRes = await fetch(`/api/coaches/${coach.id}/stripe/status`);
+                                  const statusData = await statusRes.json();
+                                  if (statusData.onboardingComplete) {
+                                    setCoach(prev => prev ? { ...prev, stripeOnboardingComplete: 'true', stripeAccountStatus: 'active' } : prev);
+                                    toast({
+                                      title: "Stripe account connected",
+                                      description: "You can now receive payments from athletes.",
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Onboarding paused",
+                                      description: "You can continue setting up your payment account anytime.",
+                                    });
+                                  }
+                                } catch { }
+                              };
+                              fetchStatus();
+                            }}
+                          />
+                        </ConnectComponentsProvider>
+                      </div>
+                    </div>
                   ) : coach.stripeAccountId ? (
                     <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                       <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
@@ -427,14 +510,14 @@ export default function CoachOwnProfile() {
                       </div>
                       <Button
                         variant="outline"
-                        onClick={() => stripeOnboardingMutation.mutate()}
+                        onClick={() => initEmbeddedOnboarding(coach.id)}
                         disabled={stripeOnboardingMutation.isPending}
                         data-testid="button-continue-onboarding"
                       >
                         {stripeOnboardingMutation.isPending ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                          <ExternalLink className="h-4 w-4 mr-2" />
+                          <CreditCard className="h-4 w-4 mr-2" />
                         )}
                         Continue Setup
                       </Button>
@@ -457,7 +540,7 @@ export default function CoachOwnProfile() {
                         ) : (
                           <CreditCard className="h-4 w-4 mr-2" />
                         )}
-                        {stripeOnboardingMutation.isPending ? "Connecting..." : "Connect with Stripe"}
+                        {stripeOnboardingMutation.isPending ? "Setting up..." : "Connect with Stripe"}
                       </Button>
                     </div>
                   )}
