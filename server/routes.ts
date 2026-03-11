@@ -1031,6 +1031,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!coach.stripeAccountId) {
         return res.status(400).json({ error: "This coach has not connected their Stripe account yet. Payments cannot be processed." });
       }
+
+      // Verify the coach's Stripe account is ready to accept payments
+      const stripeForCheck = await getUncachableStripeClient();
+      try {
+        const connectedAccount = await stripeForCheck.accounts.retrieve(coach.stripeAccountId);
+        if (!connectedAccount.charges_enabled) {
+          return res.status(400).json({ 
+            error: "This coach has not fully completed their Stripe account setup. They need to finish onboarding before payments can be processed." 
+          });
+        }
+        if (!connectedAccount.payouts_enabled) {
+          return res.status(400).json({ 
+            error: "This coach's Stripe account is not yet approved for payouts. Please try again shortly or contact the coach." 
+          });
+        }
+      } catch (accountCheckError: any) {
+        console.error('Failed to verify coach Stripe account:', accountCheckError.message);
+        return res.status(400).json({ 
+          error: "Unable to verify coach's payment account. Please try again." 
+        });
+      }
       
       const purchase = await storage.createPurchase({
         athleteId,
@@ -1118,6 +1139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer_email: athlete.email,
         payment_intent_data: {
           application_fee_amount: applicationFeeAmount,
+          on_behalf_of: coach.stripeAccountId,
           transfer_data: {
             destination: coach.stripeAccountId,
           },
