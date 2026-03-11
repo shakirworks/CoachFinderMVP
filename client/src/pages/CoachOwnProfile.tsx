@@ -211,6 +211,35 @@ export default function CoachOwnProfile() {
     },
   });
 
+  // Fetch live Stripe account status + capabilities
+  const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
+    connected: boolean; onboardingComplete: boolean; chargesEnabled: boolean; payoutsEnabled: boolean;
+    accountId?: string; capabilities?: { transfers: string; card_payments: string };
+  }>({
+    queryKey: ['/api/coaches', coach?.id, 'stripe/status'],
+    queryFn: async () => {
+      if (!coach?.id || !coach.stripeAccountId) return { connected: false, onboardingComplete: false, chargesEnabled: false, payoutsEnabled: false };
+      const res = await fetch(`/api/coaches/${coach.id}/stripe/status`);
+      return res.json();
+    },
+    enabled: !!coach?.id && !!coach?.stripeAccountId,
+    refetchInterval: 30000,
+  });
+
+  const enableTransfersMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/coaches/${coach!.id}/stripe/enable-transfers`, {});
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Transfers capability updated", description: data.message });
+      refetchStripeStatus();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Fetch coach's invoices (bookings they received)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<Invoice[]>({
     queryKey: ['/api/coaches', coach?.id, 'invoices'],
@@ -449,14 +478,56 @@ export default function CoachOwnProfile() {
                   </p>
                   
                   {coach.stripeOnboardingComplete === "true" ? (
-                    <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-green-700 dark:text-green-300" data-testid="text-stripe-connected">Account Connected</p>
-                        <p className="text-sm text-green-600 dark:text-green-400">
-                          Your Stripe account is set up and ready to receive payments directly.
-                        </p>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-medium text-green-700 dark:text-green-300" data-testid="text-stripe-connected">Account Connected</p>
+                          <p className="text-sm text-green-600 dark:text-green-400">
+                            Your Stripe account is set up and ready to receive payments directly.
+                          </p>
+                        </div>
                       </div>
+                      {stripeStatus?.capabilities && (
+                        <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                          <p className="text-sm font-medium">Payment Capabilities</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              {stripeStatus.capabilities.card_payments === 'active' ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                              )}
+                              <span className="text-muted-foreground">Card payments: <span className="font-medium capitalize">{stripeStatus.capabilities.card_payments}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {stripeStatus.capabilities.transfers === 'active' ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                              )}
+                              <span className="text-muted-foreground">Transfers: <span className="font-medium capitalize">{stripeStatus.capabilities.transfers}</span></span>
+                            </div>
+                          </div>
+                          {stripeStatus.capabilities.transfers !== 'active' && (
+                            <div className="pt-1">
+                              <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-2">
+                                Transfers capability needs to be active for athletes to pay you. Click below to request it.
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => enableTransfersMutation.mutate()}
+                                disabled={enableTransfersMutation.isPending}
+                                data-testid="button-enable-transfers"
+                              >
+                                {enableTransfersMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5 mr-1.5" />}
+                                Enable Transfers
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : showEmbeddedOnboarding && stripeConnectInstance ? (
                     <div className="space-y-4">

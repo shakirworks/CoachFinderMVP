@@ -898,45 +898,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stripe = await getUncachableStripeClient();
       const stripeAccountId = coach.stripeAccountId!;
 
-      // Try V2 API first, then fall back to V1 for legacy accounts
-      let chargesEnabled = false;
-      let onboardingComplete = false;
+      // Use V1 API to get full account details including capabilities
+      const account = await stripe.accounts.retrieve(stripeAccountId);
+      const chargesEnabled = !!account.charges_enabled;
+      const payoutsEnabled = !!account.payouts_enabled;
+      const onboardingComplete = chargesEnabled && payoutsEnabled;
+      const transfersCap = (account.capabilities as any)?.transfers;
+      const cardPaymentsCap = (account.capabilities as any)?.card_payments;
 
-      try {
-        const accountResponse = await stripe.rawRequest(
-          'GET',
-          `/v2/core/accounts/${stripeAccountId}?include[]=configuration.merchant&include[]=requirements`,
-          undefined,
-          {
-            additionalHeaders: {
-              'Stripe-Version': '2025-12-15.preview',
-            },
-          }
-        );
-
-        const account = accountResponse as any;
-        const cardPaymentsStatus = account?.configuration?.merchant?.capabilities?.card_payments?.status;
-        chargesEnabled = cardPaymentsStatus === 'active';
-        const requirementsStatus = account?.requirements?.summary?.minimum_deadline?.status;
-        onboardingComplete = requirementsStatus !== 'currently_due' && requirementsStatus !== 'past_due';
-      } catch (v2Error: any) {
-        // Fallback to V1 API for legacy accounts
-        const account = await stripe.accounts.retrieve(stripeAccountId);
-        chargesEnabled = !!account.charges_enabled;
-        onboardingComplete = !!(account.charges_enabled && account.payouts_enabled);
+      // Auto-request transfers capability if not yet requested (required for destination charges)
+      if (!transfersCap || transfersCap === 'unrequested') {
+        try {
+          await stripe.accounts.update(stripeAccountId, {
+            capabilities: { transfers: { requested: true } },
+          });
+          console.log(`Auto-requested transfers capability for coach ${coachId} (${stripeAccountId})`);
+        } catch (capErr: any) {
+          console.warn(`Could not request transfers for ${coachId}: ${capErr.message}`);
+        }
       }
 
       await storage.updateCoach(coachId, {
         stripeAccountStatus: chargesEnabled ? 'active' : 'pending',
-        stripeOnboardingComplete: (chargesEnabled && onboardingComplete) ? 'true' : 'false',
+        stripeOnboardingComplete: onboardingComplete ? 'true' : 'false',
       });
 
       res.json({
         connected: true,
-        onboardingComplete: chargesEnabled && onboardingComplete,
+        onboardingComplete,
         chargesEnabled,
-        payoutsEnabled: chargesEnabled,
+        payoutsEnabled,
         accountId: stripeAccountId,
+        capabilities: {
+          transfers: transfersCap || 'unrequested',
+          card_payments: cardPaymentsCap || 'unrequested',
+        },
       });
     } catch (error: any) {
       console.error('Stripe status error:', error);
@@ -996,6 +992,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Enable transfers capability for all coaches with connected Stripe accounts
+  app.post("/api/admin/stripe/enable-transfers", async (req, res) => {
+    try {
+      const stripe = await getUncachableStripeClient();
+      const allCoaches = await storage.getAllCoaches();
+      const connectedCoaches = allCoaches.filter(c => c.stripeAccountId);
+
+      if (connectedCoaches.length === 0) {
+        return res.json({ message: "No coaches with connected Stripe accounts found.", results: [] });
+      }
+
+      const results: Array<{ coachId: string; coachName: string; stripeAccountId: string; status: string; transfers?: string }> = [];
+
+      for (const coach of connectedCoaches) {
+        try {
+          const account = await stripe.accounts.retrieve(coach.stripeAccountId!);
+          const transfersCap = (account.capabilities as any)?.transfers;
+
+          if (!transfersCap || transfersCap === 'unrequested') {
+            await stripe.accounts.update(coach.stripeAccountId!, {
+              capabilities: { transfers: { requested: true } },
+            });
+            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'requested', transfers: 'now requested' });
+          } else {
+            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'already_set', transfers: transfersCap });
+          }
+
+          // Sync the latest status back to DB
+          await storage.updateCoach(coach.id, {
+            stripeAccountStatus: account.charges_enabled ? 'active' : 'pending',
+            stripeOnboardingComplete: (account.charges_enabled && account.payouts_enabled) ? 'true' : 'false',
+          });
+        } catch (err: any) {
+          results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'error', transfers: err.message });
+        }
+      }
+
+      const requested = results.filter(r => r.status === 'requested').length;
+      const alreadySet = results.filter(r => r.status === 'already_set').length;
+      const errors = results.filter(r => r.status === 'error').length;
+
+      res.json({ 
+        message: `Processed ${connectedCoaches.length} connected accounts. Requested: ${requested}, Already active: ${alreadySet}, Errors: ${errors}`,
+        results 
+      });
+    } catch (error: any) {
+      console.error('Enable transfers error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get transfers capability status for a specific coach
+  app.post("/api/coaches/:coachId/stripe/enable-transfers", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+
+      if (!coach || !coach.stripeAccountId) {
+        return res.status(404).json({ error: "Coach or Stripe account not found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(coach.stripeAccountId);
+      const transfersCap = (account.capabilities as any)?.transfers;
+
+      if (!transfersCap || transfersCap === 'unrequested') {
+        await stripe.accounts.update(coach.stripeAccountId, {
+          capabilities: { transfers: { requested: true } },
+        });
+        console.log(`Requested transfers capability for coach ${coachId} (${coach.stripeAccountId})`);
+        res.json({ message: 'Transfers capability requested', transfers: 'pending' });
+      } else {
+        res.json({ message: `Transfers capability already in state: ${transfersCap}`, transfers: transfersCap });
+      }
+    } catch (error: any) {
+      console.error('Enable transfers error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create Stripe Checkout session for booking
   app.post("/api/bookings/checkout", async (req, res) => {
     try {
@@ -1036,6 +1112,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stripeForCheck = await getUncachableStripeClient();
       try {
         const connectedAccount = await stripeForCheck.accounts.retrieve(coach.stripeAccountId);
+
+        // Ensure transfers capability is requested (required for destination charges)
+        const transfersCap = (connectedAccount.capabilities as any)?.transfers;
+        if (!transfersCap || transfersCap === 'unrequested') {
+          try {
+            await stripeForCheck.accounts.update(coach.stripeAccountId, {
+              capabilities: { transfers: { requested: true } },
+            });
+            console.log(`Requested transfers capability for coach ${coachId}`);
+          } catch (capErr: any) {
+            console.warn(`Could not request transfers for ${coachId}: ${capErr.message}`);
+          }
+        }
+
         if (!connectedAccount.charges_enabled) {
           return res.status(400).json({ 
             error: "This coach has not fully completed their Stripe account setup. They need to finish onboarding before payments can be processed." 
@@ -1044,6 +1134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!connectedAccount.payouts_enabled) {
           return res.status(400).json({ 
             error: "This coach's Stripe account is not yet approved for payouts. Please try again shortly or contact the coach." 
+          });
+        }
+        // If transfers is explicitly inactive/restricted, warn but still allow Stripe to handle it
+        // (accounts with charges_enabled typically have transfers automatically approved)
+        if (transfersCap === 'inactive' || transfersCap === 'restricted') {
+          return res.status(400).json({ 
+            error: "This coach's transfers capability is restricted. They need to complete their Stripe account verification before payments can be processed." 
           });
         }
       } catch (accountCheckError: any) {
@@ -1139,7 +1236,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer_email: athlete.email,
         payment_intent_data: {
           application_fee_amount: applicationFeeAmount,
-          on_behalf_of: coach.stripeAccountId,
           transfer_data: {
             destination: coach.stripeAccountId,
           },
