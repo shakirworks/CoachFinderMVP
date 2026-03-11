@@ -362,7 +362,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const athlete = await storage.getAthleteByEmail(email);
       if (!athlete) {
-        return res.status(404).json({ error: "User not found" });
+        const coach = await storage.getCoachByEmail(email);
+        if (coach) {
+          return res.status(400).json({ error: "This email is registered as a coach account. Please sign in as a coach." });
+        }
+        return res.status(404).json({ error: "No athlete account found with this email." });
       }
 
       const passwordMatch = await bcrypt.compare(password, athlete.password);
@@ -404,7 +408,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const coach = await storage.getCoachByEmail(email);
       if (!coach) {
-        return res.status(404).json({ error: "Coach not found" });
+        const athlete = await storage.getAthleteByEmail(email);
+        if (athlete) {
+          return res.status(400).json({ error: "This email is registered as an athlete account. Please sign in as an athlete." });
+        }
+        return res.status(404).json({ error: "No coach account found with this email." });
       }
 
       const passwordMatch = await bcrypt.compare(password, coach.password);

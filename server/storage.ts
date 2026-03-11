@@ -1,7 +1,7 @@
 import { type Athlete, type InsertAthlete, type Coach, type InsertCoach, type Message, type InsertMessage, type AvailabilitySlot, type InsertAvailabilitySlot, type Purchase, type InsertPurchase, type Invoice, type InsertInvoice, type PurchaseStatus, type Notification, type InsertNotification, type VerificationCode, type InsertVerificationCode, athletes, coaches, messages, availabilitySlots, purchases, invoices, notifications, verificationCodes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -162,7 +162,7 @@ export class MemStorage implements IStorage {
 
   async getAthleteByEmail(email: string): Promise<Athlete | undefined> {
     return Array.from(this.athletes.values()).find(
-      (athlete) => athlete.email === email,
+      (athlete) => athlete.email.toLowerCase() === email.toLowerCase(),
     );
   }
 
@@ -219,7 +219,7 @@ export class MemStorage implements IStorage {
 
   async getCoachByEmail(email: string): Promise<Coach | undefined> {
     return Array.from(this.coaches.values()).find(
-      (coach) => coach.email === email,
+      (coach) => coach.email.toLowerCase() === email.toLowerCase(),
     );
   }
 
@@ -476,7 +476,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async getAthleteByEmail(email: string): Promise<Athlete | undefined> {
-    const result = await db.select().from(athletes).where(eq(athletes.email, email));
+    const result = await db.select().from(athletes).where(ilike(athletes.email, email));
     return result[0];
   }
 
@@ -509,7 +509,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async getCoachByEmail(email: string): Promise<Coach | undefined> {
-    const result = await db.select().from(coaches).where(eq(coaches.email, email));
+    const result = await db.select().from(coaches).where(ilike(coaches.email, email));
     return result[0];
   }
 
@@ -817,7 +817,7 @@ export class PostgresStorage implements IStorage {
       .from(verificationCodes)
       .where(
         and(
-          eq(verificationCodes.email, email),
+          ilike(verificationCodes.email, email),
           eq(verificationCodes.code, code),
           eq(verificationCodes.role, role),
           eq(verificationCodes.used, "false")
