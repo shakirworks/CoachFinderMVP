@@ -150,7 +150,7 @@ export default function Home() {
           </h1>
           <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
             Connect with certified professionals, book personalized training sessions,
-            and elevate your athletic performance to the next level.
+            and elevate your athletic performance to the next level
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {authenticated ? (
@@ -194,7 +194,7 @@ export default function Home() {
               Why Choose CoachFinders
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              The premier platform connecting athletes with expert coaches
+              The leading platform connecting athletes with expert coaches
             </p>
           </div>
 
@@ -218,7 +218,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-medium mb-3">Easy Scheduling</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  View real-time availability and book sessions instantly with our intuitive calendar system.
+                  View real-time availability and book sessions instantly with our live calendar system.
                 </p>
               </CardContent>
             </Card>

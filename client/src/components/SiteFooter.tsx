@@ -12,7 +12,7 @@ export default function SiteFooter() {
               <img src={logoImage} alt="CoachFinders" className="h-7 w-auto" data-testid="img-footer-logo" />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The premier platform connecting athletes with expert coaches across all sports.
+              The leading platform connecting athletes with expert coaches across all sports.
             </p>
           </div>
 
