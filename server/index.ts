@@ -4,8 +4,46 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebhookHandlers } from "./webhookHandlers";
+import { db } from "./db";
+import { coaches, availabilitySlots, purchases, invoices, notifications, messages } from "@shared/schema";
+import { inArray, like } from "drizzle-orm";
 
 const app = express();
+
+async function removeDummyCoaches() {
+  try {
+    const dummyCoaches = await db
+      .select({ id: coaches.id })
+      .from(coaches)
+      .where(like(coaches.email, "%@email.com"));
+
+    if (dummyCoaches.length === 0) return;
+
+    const ids = dummyCoaches.map((c) => c.id);
+    console.log(`Removing ${ids.length} dummy coach(es) from database...`);
+
+    await db.delete(notifications).where(inArray(notifications.recipientId, ids));
+    await db.delete(messages).where(inArray(messages.coachId, ids));
+    await db.delete(availabilitySlots).where(inArray(availabilitySlots.coachId, ids));
+
+    const affectedPurchases = await db
+      .select({ id: purchases.id })
+      .from(purchases)
+      .where(inArray(purchases.coachId, ids));
+    if (affectedPurchases.length > 0) {
+      const purchaseIds = affectedPurchases.map((p) => p.id);
+      await db.delete(invoices).where(inArray(invoices.purchaseId, purchaseIds));
+      await db.delete(purchases).where(inArray(purchases.id, purchaseIds));
+    }
+
+    await db.delete(coaches).where(inArray(coaches.id, ids));
+    console.log(`Removed ${ids.length} dummy coach(es) successfully.`);
+  } catch (err: any) {
+    console.error("removeDummyCoaches error:", err.message);
+  }
+}
+
+removeDummyCoaches().catch(console.error);
 
 async function initStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
