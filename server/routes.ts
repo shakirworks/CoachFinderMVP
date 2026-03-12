@@ -610,8 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Token and a password of at least 6 characters are required" });
       }
 
-      const record = await storage.getVerificationCodeByToken(token);
-      if (!record || record.type !== "password_reset" || record.used === "true") {
+      const record = await storage.getVerificationCodeByToken(token, "password_reset");
+      if (!record || record.used === "true") {
         return res.status(400).json({ error: "This reset link is invalid or has already been used." });
       }
 

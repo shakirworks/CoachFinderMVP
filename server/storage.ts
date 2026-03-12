@@ -55,7 +55,7 @@ export interface IStorage {
 
   createVerificationCode(code: InsertVerificationCode): Promise<VerificationCode>;
   getVerificationCode(email: string, code: string, role: string): Promise<VerificationCode | undefined>;
-  getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined>;
+  getVerificationCodeByToken(token: string, type?: string): Promise<VerificationCode | undefined>;
   markVerificationCodeUsed(id: string): Promise<void>;
   deleteExpiredVerificationCodes(): Promise<void>;
 }
@@ -455,7 +455,7 @@ export class MemStorage implements IStorage {
     throw new Error("Not implemented - use PostgresStorage");
   }
 
-  async getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined> {
+  async getVerificationCodeByToken(token: string, type?: string): Promise<VerificationCode | undefined> {
     throw new Error("Not implemented - use PostgresStorage");
   }
 
@@ -826,14 +826,14 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async getVerificationCodeByToken(token: string): Promise<VerificationCode | undefined> {
+  async getVerificationCodeByToken(token: string, type: string = "signup"): Promise<VerificationCode | undefined> {
     const result = await db
       .select()
       .from(verificationCodes)
       .where(
         and(
           eq(verificationCodes.code, token),
-          eq(verificationCodes.type, "signup"),
+          eq(verificationCodes.type, type),
           eq(verificationCodes.used, "false")
         )
       )
