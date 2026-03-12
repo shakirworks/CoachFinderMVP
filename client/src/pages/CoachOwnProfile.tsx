@@ -214,7 +214,7 @@ export default function CoachOwnProfile() {
   // Fetch live Stripe account status + capabilities
   const { data: stripeStatus, refetch: refetchStripeStatus } = useQuery<{
     connected: boolean; onboardingComplete: boolean; chargesEnabled: boolean; payoutsEnabled: boolean;
-    accountId?: string; capabilities?: { transfers: string; card_payments: string };
+    accountId?: string; transfersActive?: boolean; capabilities?: { transfers: string; card_payments: string };
   }>({
     queryKey: ['/api/coaches', coach?.id, 'stripe/status'],
     queryFn: async () => {
@@ -501,18 +501,20 @@ export default function CoachOwnProfile() {
                               <span className="text-muted-foreground">Card payments: <span className="font-medium capitalize">{stripeStatus.capabilities.card_payments}</span></span>
                             </div>
                             <div className="flex items-center gap-2">
-                              {stripeStatus.capabilities.transfers === 'active' ? (
+                              {stripeStatus.transfersActive ? (
                                 <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                               ) : (
                                 <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
                               )}
-                              <span className="text-muted-foreground">Transfers: <span className="font-medium capitalize">{stripeStatus.capabilities.transfers}</span></span>
+                              <span className="text-muted-foreground">Transfers: <span className="font-medium capitalize">
+                                {stripeStatus.transfersActive ? 'active' : (stripeStatus.capabilities.transfers || 'pending')}
+                              </span></span>
                             </div>
                           </div>
-                          {stripeStatus.capabilities.transfers !== 'active' && (
+                          {!stripeStatus.transfersActive && (
                             <div className="pt-1">
                               <p className="text-xs text-yellow-600 dark:text-yellow-400 mb-2">
-                                Transfers capability needs to be active for athletes to pay you. Click below to request it.
+                                Transfers need to be enabled for athletes to pay you. Click below to request activation — for verified accounts this usually activates immediately.
                               </p>
                               <Button
                                 size="sm"

@@ -275,7 +275,7 @@ export class WebhookHandlers {
     
     console.log(`Received V2 thin event: ${verifiedEvent.type}`);
 
-    const eventType = verifiedEvent.type;
+    const eventType = verifiedEvent.type as string;
 
     if (
       eventType === 'v2.core.account[requirements].updated' ||

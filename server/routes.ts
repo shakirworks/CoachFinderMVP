@@ -22,6 +22,52 @@ declare module "express-session" {
 const SERVICE_FEE_PERCENTAGE = 0.07;
 const HST_PERCENTAGE = 0.13;
 
+// Request the transfers capability on a connected account via both V2 and V1 APIs.
+// V2 accounts need the 'stripe_balance.stripe_transfers' recipient capability.
+// V1 accounts need the 'transfers' capability.  We request both to cover all cases.
+async function requestStripeTransfersCapability(stripe: Awaited<ReturnType<typeof getUncachableStripeClient>>, accountId: string): Promise<void> {
+  const v2Headers = { additionalHeaders: { 'Stripe-Version': '2025-12-15.preview' } };
+
+  // Try V2: recipient.capabilities.stripe_balance.stripe_transfers
+  try {
+    await stripe.rawRequest('POST', `/v2/core/accounts/${accountId}`, {
+      configuration: {
+        recipient: {
+          capabilities: {
+            stripe_balance: {
+              stripe_transfers: { requested: true },
+            },
+          },
+        },
+      },
+    }, v2Headers);
+    console.log(`[Stripe] Requested stripe_balance.stripe_transfers via V2 for ${accountId}`);
+  } catch (v2Err: any) {
+    console.warn(`[Stripe] V2 stripe_balance.stripe_transfers request failed for ${accountId}: ${v2Err.message}`);
+  }
+
+  // Also try V1: capabilities.transfers (covers V1 Express accounts and older-API-version flows)
+  try {
+    await stripe.accounts.update(accountId, {
+      capabilities: { transfers: { requested: true } },
+    });
+    console.log(`[Stripe] Requested transfers capability via V1 for ${accountId}`);
+  } catch (v1Err: any) {
+    console.warn(`[Stripe] V1 transfers capability request failed for ${accountId}: ${v1Err.message}`);
+  }
+}
+
+function isTransfersCapabilityActive(account: { capabilities?: unknown }): boolean {
+  const caps = account.capabilities as Record<string, string> | null | undefined;
+  return caps?.transfers === 'active' || caps?.stripe_balance_stripe_transfers === 'active';
+}
+
+function isTransfersCapabilityBlocked(account: { capabilities?: unknown }): boolean {
+  const caps = account.capabilities as Record<string, string> | null | undefined;
+  const transfers = caps?.transfers;
+  return transfers === 'inactive' || transfers === 'restricted';
+}
+
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -796,6 +842,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                 },
               },
+              recipient: {
+                capabilities: {
+                  stripe_balance: {
+                    stripe_transfers: { requested: true },
+                  },
+                },
+              },
             },
             metadata: {
               coachId: coach.id,
@@ -914,16 +967,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transfersCap = (account.capabilities as any)?.transfers;
       const cardPaymentsCap = (account.capabilities as any)?.card_payments;
 
-      // Auto-request transfers capability if not yet requested (required for destination charges)
-      if (!transfersCap || transfersCap === 'unrequested') {
-        try {
-          await stripe.accounts.update(stripeAccountId, {
-            capabilities: { transfers: { requested: true } },
-          });
-          console.log(`Auto-requested transfers capability for coach ${coachId} (${stripeAccountId})`);
-        } catch (capErr: any) {
-          console.warn(`Could not request transfers for ${coachId}: ${capErr.message}`);
-        }
+      // Auto-request transfers capability if not yet active (required for destination charges)
+      if (!isTransfersCapabilityActive(account)) {
+        await requestStripeTransfersCapability(stripe, stripeAccountId);
       }
 
       await storage.updateCoach(coachId, {
@@ -937,6 +983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chargesEnabled,
         payoutsEnabled,
         accountId: stripeAccountId,
+        transfersActive: isTransfersCapabilityActive(account),
         capabilities: {
           transfers: transfersCap || 'unrequested',
           card_payments: cardPaymentsCap || 'unrequested',
@@ -1016,15 +1063,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const coach of connectedCoaches) {
         try {
           const account = await stripe.accounts.retrieve(coach.stripeAccountId!);
-          const transfersCap = (account.capabilities as any)?.transfers;
+          const alreadyActive = isTransfersCapabilityActive(account);
 
-          if (!transfersCap || transfersCap === 'unrequested') {
-            await stripe.accounts.update(coach.stripeAccountId!, {
-              capabilities: { transfers: { requested: true } },
-            });
-            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'requested', transfers: 'now requested' });
+          if (!alreadyActive) {
+            await requestStripeTransfersCapability(stripe, coach.stripeAccountId!);
+            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'requested', transfers: 'requested via V2+V1' });
           } else {
-            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'already_set', transfers: transfersCap });
+            results.push({ coachId: coach.id, coachName: coach.name, stripeAccountId: coach.stripeAccountId!, status: 'already_active', transfers: 'active' });
           }
 
           // Sync the latest status back to DB
@@ -1038,11 +1083,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const requested = results.filter(r => r.status === 'requested').length;
-      const alreadySet = results.filter(r => r.status === 'already_set').length;
+      const alreadyActive = results.filter(r => r.status === 'already_active').length;
       const errors = results.filter(r => r.status === 'error').length;
 
       res.json({ 
-        message: `Processed ${connectedCoaches.length} connected accounts. Requested: ${requested}, Already active: ${alreadySet}, Errors: ${errors}`,
+        message: `Processed ${connectedCoaches.length} connected accounts. Requested: ${requested}, Already active: ${alreadyActive}, Errors: ${errors}`,
         results 
       });
     } catch (error: any) {
@@ -1051,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get transfers capability status for a specific coach
+  // Enable transfers capability for a specific coach (V2 + V1 APIs)
   app.post("/api/coaches/:coachId/stripe/enable-transfers", async (req, res) => {
     try {
       const { coachId } = req.params;
@@ -1062,18 +1107,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stripe = await getUncachableStripeClient();
-      const account = await stripe.accounts.retrieve(coach.stripeAccountId);
-      const transfersCap = (account.capabilities as any)?.transfers;
+      const accountBefore = await stripe.accounts.retrieve(coach.stripeAccountId);
 
-      if (!transfersCap || transfersCap === 'unrequested') {
-        await stripe.accounts.update(coach.stripeAccountId, {
-          capabilities: { transfers: { requested: true } },
-        });
-        console.log(`Requested transfers capability for coach ${coachId} (${coach.stripeAccountId})`);
-        res.json({ message: 'Transfers capability requested', transfers: 'pending' });
-      } else {
-        res.json({ message: `Transfers capability already in state: ${transfersCap}`, transfers: transfersCap });
+      if (isTransfersCapabilityActive(accountBefore)) {
+        return res.json({ message: 'Transfers capability already active', transfers: 'active' });
       }
+
+      await requestStripeTransfersCapability(stripe, coach.stripeAccountId);
+
+      // Re-check after requesting
+      const accountAfter = await stripe.accounts.retrieve(coach.stripeAccountId);
+      const transfersStatus = (accountAfter.capabilities as any)?.transfers || 'unrequested';
+
+      console.log(`[Stripe] enable-transfers for coach ${coachId}: ${transfersStatus}`);
+      res.json({ 
+        message: `Transfers capability requested via V2 and V1 APIs`, 
+        transfers: transfersStatus,
+        active: isTransfersCapabilityActive(accountAfter),
+      });
     } catch (error: any) {
       console.error('Enable transfers error:', error);
       res.status(500).json({ error: error.message });
@@ -1119,20 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the coach's Stripe account is ready to accept payments
       const stripeForCheck = await getUncachableStripeClient();
       try {
-        const connectedAccount = await stripeForCheck.accounts.retrieve(coach.stripeAccountId);
-
-        // Ensure transfers capability is requested (required for destination charges)
-        const transfersCap = (connectedAccount.capabilities as any)?.transfers;
-        if (!transfersCap || transfersCap === 'unrequested') {
-          try {
-            await stripeForCheck.accounts.update(coach.stripeAccountId, {
-              capabilities: { transfers: { requested: true } },
-            });
-            console.log(`Requested transfers capability for coach ${coachId}`);
-          } catch (capErr: any) {
-            console.warn(`Could not request transfers for ${coachId}: ${capErr.message}`);
-          }
-        }
+        let connectedAccount = await stripeForCheck.accounts.retrieve(coach.stripeAccountId);
 
         if (!connectedAccount.charges_enabled) {
           return res.status(400).json({ 
@@ -1144,12 +1182,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: "This coach's Stripe account is not yet approved for payouts. Please try again shortly or contact the coach." 
           });
         }
-        // If transfers is explicitly inactive/restricted, warn but still allow Stripe to handle it
-        // (accounts with charges_enabled typically have transfers automatically approved)
-        if (transfersCap === 'inactive' || transfersCap === 'restricted') {
-          return res.status(400).json({ 
-            error: "This coach's transfers capability is restricted. They need to complete their Stripe account verification before payments can be processed." 
-          });
+
+        // Ensure the transfers capability is requested via both V2 and V1 APIs.
+        // This is required for destination charges (stripe_balance.stripe_transfers feature).
+        if (!isTransfersCapabilityActive(connectedAccount)) {
+          if (isTransfersCapabilityBlocked(connectedAccount)) {
+            return res.status(400).json({ 
+              error: "This coach's transfers capability is restricted. They need to complete additional Stripe account verification before payments can be processed." 
+            });
+          }
+          // Request via V2 + V1, then re-check immediately
+          await requestStripeTransfersCapability(stripeForCheck, coach.stripeAccountId);
+          connectedAccount = await stripeForCheck.accounts.retrieve(coach.stripeAccountId);
+          console.log(`[Stripe] Transfers after request for ${coach.stripeAccountId}: ${(connectedAccount.capabilities as any)?.transfers}`);
         }
       } catch (accountCheckError: any) {
         console.error('Failed to verify coach Stripe account:', accountCheckError.message);
@@ -1263,6 +1308,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Checkout error:', error);
+      if (error?.code === 'insufficient_capabilities_for_transfer' || error?.message?.includes('stripe_balance.stripe_transfers')) {
+        return res.status(400).json({ 
+          error: "This coach's payment account is still completing its setup for receiving transfers. Please try again in a few minutes, or ask the coach to visit their Stripe dashboard to confirm their account is fully verified." 
+        });
+      }
       res.status(500).json({ error: error.message });
     }
   });
