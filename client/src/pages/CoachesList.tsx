@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, WELCOME_DISMISSED_KEY, WELCOME_SHOW_KEY, WELCOME_USER_KEY } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import SiteFooter from "@/components/SiteFooter";
 import SiteNav from "@/components/SiteNav";
 import {
@@ -29,6 +37,7 @@ import { useState, useEffect } from "react";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 
 const WELCOME_SPORT_KEY = "coachfinders_search_sport";
+const SPORTS = ["Soccer", "Tennis", "Golf", "Pickleball", "Skiing", "Baseball", "Personal Training"];
 
 export default function CoachesList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +58,43 @@ export default function CoachesList() {
   const [minRate, setMinRate] = useState("");
   const [maxRate, setMaxRate] = useState("");
   const [, setLocation] = useLocation();
+
+  // Welcome dialog state
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
+  const [welcomeUserName, setWelcomeUserName] = useState("");
+  const [selectedWelcomeSport, setSelectedWelcomeSport] = useState<string | null>(null);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  // On mount: check if we should show the welcome dialog
+  useEffect(() => {
+    const shouldShow = localStorage.getItem(WELCOME_SHOW_KEY) === "true";
+    if (shouldShow) {
+      localStorage.removeItem(WELCOME_SHOW_KEY);
+      const userName = localStorage.getItem(WELCOME_USER_KEY) || "";
+      localStorage.removeItem(WELCOME_USER_KEY);
+      setWelcomeUserName(userName);
+      setSelectedWelcomeSport(null);
+      setDontShowAgain(false);
+      setShowWelcomeDialog(true);
+    }
+  }, []);
+
+  const handleFindCoach = () => {
+    if (dontShowAgain) {
+      localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
+    }
+    if (selectedWelcomeSport) {
+      setSelectedSport(selectedWelcomeSport);
+    }
+    setShowWelcomeDialog(false);
+  };
+
+  const handleCloseWelcome = () => {
+    if (dontShowAgain) {
+      localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
+    }
+    setShowWelcomeDialog(false);
+  };
 
   const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
 
@@ -367,6 +413,63 @@ export default function CoachesList() {
       )}
 
       <SiteFooter />
+
+      {/* Athlete welcome dialog */}
+      <Dialog open={showWelcomeDialog} onOpenChange={(open) => { if (!open) handleCloseWelcome(); }}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-welcome">
+          <DialogHeader className="space-y-2 pb-1">
+            <DialogTitle className="text-2xl font-semibold" data-testid="text-welcome-title">
+              Welcome{welcomeUserName ? `, ${welcomeUserName}` : ""}!
+            </DialogTitle>
+            <DialogDescription className="text-base" data-testid="text-welcome-description">
+              Let's find the perfect coach for you. Which sport are you training for?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            <div className="flex flex-wrap gap-2" data-testid="sport-selector">
+              {SPORTS.map((sport) => (
+                <Button
+                  key={sport}
+                  variant={selectedWelcomeSport === sport ? "default" : "outline"}
+                  size="sm"
+                  onClick={() =>
+                    setSelectedWelcomeSport((prev) => (prev === sport ? null : sport))
+                  }
+                  data-testid={`button-welcome-sport-${sport.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {sport}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col gap-3 sm:flex-col">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleFindCoach}
+              data-testid="button-find-coach"
+            >
+              Find Your Coach
+            </Button>
+            <div className="flex items-center gap-2 justify-center" data-testid="dont-show-again-row">
+              <Checkbox
+                id="dont-show-again"
+                checked={dontShowAgain}
+                onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                data-testid="checkbox-dont-show-again"
+              />
+              <Label
+                htmlFor="dont-show-again"
+                className="text-sm text-muted-foreground cursor-pointer select-none"
+              >
+                Don't show this message again
+              </Label>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
