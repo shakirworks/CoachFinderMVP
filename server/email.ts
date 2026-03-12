@@ -106,3 +106,50 @@ export async function sendWelcomeVerification(
 
   console.log(`[Email] Welcome verification sent successfully to: ${to}, messageId: ${result.messageId}, response: ${result.response}`);
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  resetLink: string,
+  role: "athlete" | "coach"
+): Promise<void> {
+  const roleLabel = role === "athlete" ? "Athlete" : "Coach";
+
+  await transporter.sendMail({
+    from: `"CoachFinders" <${process.env.SMTP_USER || "support@coachfinders.ca"}>`,
+    to,
+    subject: "Reset Your CoachFinders Password",
+    html: `
+      <div style="font-family: 'Inter', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 8px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h1 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0;">CoachFinders</h1>
+          <p style="color: #666; font-size: 14px; margin-top: 4px;">Premium Athletic Coaching Platform</p>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">Hello,</p>
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">
+          We received a request to reset the password for your <strong>${roleLabel}</strong> account. Click the button below to choose a new password:
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${resetLink}" style="display: inline-block; background: #2d6a4f; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none;">
+            Reset My Password
+          </a>
+        </div>
+        <p style="color: #666; font-size: 14px; line-height: 1.5;">
+          Or copy and paste this link into your browser:
+        </p>
+        <p style="color: #2d6a4f; font-size: 13px; line-height: 1.5; word-break: break-all;">
+          ${resetLink}
+        </p>
+        <p style="color: #666; font-size: 14px; line-height: 1.5;">
+          This link expires in <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email — your password will not be changed.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #999; font-size: 12px; text-align: center;">
+          &copy; ${new Date().getFullYear()} CoachFinders. All rights reserved.<br />
+          support@coachfinders.ca
+        </p>
+      </div>
+    `,
+    text: `Reset Your CoachFinders Password\n\nWe received a request to reset your password. Visit the link below to set a new password:\n\n${resetLink}\n\nThis link expires in 1 hour. If you did not request this, you can safely ignore this email.\n\n- CoachFinders Team`,
+  });
+}

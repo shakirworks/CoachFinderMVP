@@ -37,7 +37,8 @@ Preferred communication style: Simple, everyday language.
 - **Sign-in Flow**: Email + password verification → 5-digit code sent to email (10min expiry) → code verified → user logged in.
 - **Password Security**: bcrypt hashing (10 rounds), passwords never returned in API responses.
 - **Email Verification**: Verification tokens (UUID) stored in `verification_codes` table with type="signup", role, and hashed password. Token marked as used after account creation.
-- **Email Service**: Nodemailer with SMTP (support@coachfinders.ca), sends welcome verification emails and login codes.
+- **Forgot Password**: `POST /api/auth/forgot-password` (email + role → creates `verification_codes` row with `type='password_reset'`, UUID token, 1-hour expiry → sends reset link email). `POST /api/auth/reset-password` (token + newPassword → verifies token, bcrypt hashes, updates password, marks token used). Frontend: "Forgot password?" link in sign-in mode opens inline view; reset link navigates to `/reset-password?token=xxx&role=xxx` (`client/src/pages/ResetPassword.tsx`). Always returns 200 from forgot-password endpoint to prevent email enumeration.
+- **Email Service**: Nodemailer with SMTP (support@coachfinders.ca), sends welcome verification emails, login codes, and password reset links.
 - **Session Management**: Server-side sessions via `express-session` with `connect-pg-simple` (PostgreSQL store). 30-minute rolling timeout with inactivity warning dialog at 28 minutes. Sessions created on login verification and signup. AuthProvider context (`client/src/contexts/AuthContext.tsx`) manages auth state app-wide, syncing with server sessions and localStorage fallback. Profile pages consume AuthContext as primary source.
 
 ## External Dependencies

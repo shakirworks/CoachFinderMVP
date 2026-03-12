@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Mail, AlertCircle, Loader2, Lock, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Mail, AlertCircle, Loader2, Lock, ShieldCheck, ArrowLeft, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface EmailSignupFormProps {
@@ -40,6 +40,13 @@ export default function EmailSignupForm({
   const [debouncedEmail, setDebouncedEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState(["", "", "", "", ""]);
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Forgot-password flow state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -125,6 +132,145 @@ export default function EmailSignupForm({
     }
   };
 
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail || !forgotEmail.includes("@")) return;
+
+    setIsForgotLoading(true);
+    setForgotError(null);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail, role }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setForgotError(data.error || "Something went wrong. Please try again.");
+      } else {
+        setForgotSent(true);
+      }
+    } catch {
+      setForgotError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  // ── Forgot Password view ──────────────────────────────────────────────────
+  if (showForgotPassword) {
+    return (
+      <div className="w-full max-w-md mx-auto p-6">
+        <div className="mb-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            {forgotSent
+              ? <CheckCircle className="w-8 h-8 text-primary" />
+              : <Mail className="w-8 h-8 text-primary" />
+            }
+          </div>
+          <h2 className="text-3xl font-bold mb-2">
+            {forgotSent ? "Check Your Email" : "Forgot Password"}
+          </h2>
+          <p className="text-muted-foreground">
+            {forgotSent
+              ? `If an account exists for ${forgotEmail}, we sent a reset link. It expires in 1 hour.`
+              : "Enter your email and we'll send you a link to reset your password."}
+          </p>
+        </div>
+
+        {!forgotSent ? (
+          <form onSubmit={handleForgotSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="pl-10 h-12"
+                  required
+                  autoFocus
+                  data-testid="input-forgot-email"
+                />
+              </div>
+            </div>
+
+            {forgotError && (
+              <div
+                className="flex items-start gap-2 text-destructive text-sm"
+                data-testid="text-forgot-error"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p>{forgotError}</p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Button
+                type="submit"
+                className="w-full h-12"
+                disabled={isForgotLoading || !forgotEmail.includes("@")}
+                data-testid="button-send-reset-link"
+              >
+                {isForgotLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reset Link"
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setForgotSent(false);
+                  setForgotError(null);
+                  setForgotEmail("");
+                }}
+                data-testid="button-back-from-forgot"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Sign In
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground text-center">
+              Check your spam folder if you don't see it within a few minutes.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setForgotSent(false);
+                setForgotError(null);
+                setForgotEmail("");
+              }}
+              data-testid="button-back-to-signin"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Sign In
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Verification code view ────────────────────────────────────────────────
   if (isSignIn && loginStep === "verification") {
     return (
       <div className="w-full max-w-md mx-auto p-6">
@@ -196,6 +342,7 @@ export default function EmailSignupForm({
     );
   }
 
+  // ── Main credentials view ─────────────────────────────────────────────────
   return (
     <div className="w-full max-w-md mx-auto p-6">
       <div className="mb-8 text-center">
@@ -257,7 +404,25 @@ export default function EmailSignupForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            {isSignIn && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="p-0 h-auto text-sm text-muted-foreground underline-offset-2 hover:underline"
+                onClick={() => {
+                  setForgotEmail(email);
+                  setForgotSent(false);
+                  setForgotError(null);
+                  setShowForgotPassword(true);
+                }}
+                data-testid="button-forgot-password"
+              >
+                Forgot password?
+              </Button>
+            )}
+          </div>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input

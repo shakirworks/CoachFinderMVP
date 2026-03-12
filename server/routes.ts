@@ -6,7 +6,7 @@ import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvai
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
-import { sendVerificationCode, sendWelcomeVerification } from "./email";
+import { sendVerificationCode, sendWelcomeVerification, sendPasswordResetEmail } from "./email";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -556,6 +556,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(safeCoach);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Forgot password: send reset link to email
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email, role } = req.body;
+      if (!email || !role || !["athlete", "coach"].includes(role)) {
+        return res.status(400).json({ error: "Email and role are required" });
+      }
+
+      // Look up the user — always return 200 to not reveal if email exists
+      const user = role === "athlete"
+        ? await storage.getAthleteByEmail(email)
+        : await storage.getCoachByEmail(email);
+
+      if (user) {
+        const token = randomUUID();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await storage.createVerificationCode({
+          email: user.email,
+          code: token,
+          role,
+          type: "password_reset",
+          expiresAt,
+        });
+
+        const forwardedProto = req.get("x-forwarded-proto") || req.protocol;
+        const forwardedHost = req.get("x-forwarded-host") || req.get("host");
+        const origin = req.get("origin");
+        const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
+        const resetLink = `${baseUrl}/reset-password?token=${token}&role=${role}`;
+
+        await sendPasswordResetEmail(user.email, resetLink, role);
+        console.log(`[Auth] Password reset email sent to ${user.email} (${role})`);
+      }
+
+      // Always respond the same way so attackers can't enumerate emails
+      res.json({ message: "If an account with that email exists, a reset link has been sent." });
+    } catch (error: any) {
+      console.error("Forgot password error:", error.message);
+      res.status(500).json({ error: "Failed to process password reset request" });
+    }
+  });
+
+  // Reset password: validate token and set new password
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: "Token and a password of at least 6 characters are required" });
+      }
+
+      const record = await storage.getVerificationCodeByToken(token);
+      if (!record || record.type !== "password_reset" || record.used === "true") {
+        return res.status(400).json({ error: "This reset link is invalid or has already been used." });
+      }
+
+      if (new Date() > record.expiresAt) {
+        return res.status(400).json({ error: "This reset link has expired. Please request a new one." });
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      const role = record.role as "athlete" | "coach";
+
+      if (role === "athlete") {
+        const athlete = await storage.getAthleteByEmail(record.email);
+        if (!athlete) return res.status(404).json({ error: "Account not found" });
+        await storage.updateAthlete(athlete.id, { password: hashed });
+      } else {
+        const coach = await storage.getCoachByEmail(record.email);
+        if (!coach) return res.status(404).json({ error: "Account not found" });
+        await storage.updateCoach(coach.id, { password: hashed });
+      }
+
+      await storage.markVerificationCodeUsed(record.id);
+      console.log(`[Auth] Password reset successful for ${record.email} (${role})`);
+
+      res.json({ message: "Password updated successfully. You can now sign in with your new password." });
+    } catch (error: any) {
+      console.error("Reset password error:", error.message);
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 

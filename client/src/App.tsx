@@ -14,6 +14,7 @@ import CoachOwnProfile from "@/pages/CoachOwnProfile";
 import BookingSuccess from "@/pages/BookingSuccess";
 import VerifyEmail from "@/pages/VerifyEmail";
 import ProfileSetup from "@/pages/ProfileSetup";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
         <Route path="/booking/success" component={BookingSuccess} />
         <Route path="/verify-email" component={VerifyEmail} />
         <Route path="/profile-setup" component={ProfileSetup} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route component={NotFound} />
       </Switch>
     </PageTransition>
