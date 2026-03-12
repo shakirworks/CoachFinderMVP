@@ -12,6 +12,7 @@ import { MapPin, Mail, ArrowLeft, MessageCircle, DollarSign } from "lucide-react
 import type { Coach, Athlete } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 import SiteFooter from "@/components/SiteFooter";
+import SiteNav from "@/components/SiteNav";
 
 export default function CoachProfile() {
   const [, params] = useRoute("/coach/:id");
@@ -55,16 +56,17 @@ export default function CoachProfile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <SiteNav>
         <Button
           variant="ghost"
           onClick={() => setLocation("/coaches")}
-          className="mb-4 sm:mb-6"
           data-testid="button-back-to-coaches"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Coaches
         </Button>
+      </SiteNav>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
 
         <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 space-y-0 pb-4">

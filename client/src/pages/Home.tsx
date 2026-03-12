@@ -26,10 +26,15 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between gap-4 px-4">
-          <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-2 rounded-md px-1 py-1 hover-elevate"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            aria-label="Back to top"
+            data-testid="link-home-logo"
+          >
             <img src={badgeImage} alt="CoachFinders badge" className="h-10 w-10 rounded-full object-cover" data-testid="img-header-badge" />
-            <img src={logoImage} alt="CoachFinders" className="h-8 w-auto" data-testid="img-header-logo" />
-          </div>
+            <img src={logoImage} alt="CoachFinders" className="h-8 w-auto hidden sm:block" data-testid="img-header-logo" />
+          </button>
           <div className="hidden md:flex items-center gap-4">
             <Button variant="ghost" onClick={() => scrollToSection("about")} data-testid="button-about-nav">
               About Us

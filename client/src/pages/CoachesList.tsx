@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import SiteFooter from "@/components/SiteFooter";
+import SiteNav from "@/components/SiteNav";
 import {
   Collapsible,
   CollapsibleContent,
@@ -116,56 +117,57 @@ export default function CoachesList() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SiteNav>
+        {athlete && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2"
+                data-testid="button-athlete-menu"
+              >
+                <Avatar className="w-8 h-8">
+                  <AvatarImage
+                    src={athlete.profileImage || athleteImage}
+                    alt={athlete.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                    {athlete.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline text-sm font-medium">
+                  {athlete.name.split(' ')[0]}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => setLocation("/profile")}
+                data-testid="menu-item-profile"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setLocation("/profile?tab=messages")}
+                data-testid="menu-item-messages"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Messages
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </SiteNav>
+
       <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Find Your Coach</h1>
-            <p className="text-muted-foreground">
-              Browse through our network of experienced coaches
-            </p>
-          </div>
-          
-          {athlete && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="flex flex-col items-center gap-2 h-auto py-2 px-3 hover-elevate"
-                  data-testid="button-athlete-menu"
-                >
-                  <Avatar className="w-10 h-10 md:w-24 md:h-24">
-                    <AvatarImage
-                      src={athlete.profileImage || athleteImage}
-                      alt={athlete.name}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-base md:text-3xl">
-                      {athlete.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden md:block text-sm font-medium text-foreground">
-                    {athlete.name.split(' ')[0]}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setLocation("/profile")}
-                  data-testid="menu-item-profile"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setLocation("/profile?tab=messages")}
-                  data-testid="menu-item-messages"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Messages
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Find Your Coach</h1>
+          <p className="text-muted-foreground">
+            Browse through our network of experienced coaches
+          </p>
         </div>
 
         <div className="mb-6 space-y-4">

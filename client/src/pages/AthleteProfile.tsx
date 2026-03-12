@@ -36,6 +36,7 @@ import type { Athlete, Coach, Message, Invoice } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
+import SiteNav from "@/components/SiteNav";
 
 export default function AthleteProfile() {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
@@ -188,16 +189,17 @@ export default function AthleteProfile() {
   return (
     <div className="min-h-screen bg-background">
       <MessageNotificationListener recipientId={athlete.id} recipientType="athlete" />
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <SiteNav>
         <Button
           variant="ghost"
           onClick={() => setLocation("/coaches")}
-          className="mb-4 sm:mb-6"
           data-testid="button-back-to-coaches"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Coaches
+          Browse Coaches
         </Button>
+      </SiteNav>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6">
