@@ -774,6 +774,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/availability", async (req, res) => {
     try {
       const slotData = insertAvailabilitySlotSchema.parse(req.body);
+      // Reject slots on past dates
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const slotDate = new Date(slotData.date + "T00:00:00");
+      if (slotDate < today) {
+        return res.status(400).json({ error: "Cannot create availability slots for past dates" });
+      }
       const slot = await storage.createAvailabilitySlot(slotData);
       res.json(slot);
     } catch (error: any) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,9 @@ export function AvailabilityCalendar({
   selectedSlots = [],
   onSlotsChange,
 }: AvailabilityCalendarProps) {
+  const today = startOfDay(new Date());
+  const isDateInPast = (date: Date) => startOfDay(date) < today;
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isAddingSlot, setIsAddingSlot] = useState(false);
   const [startHour, setStartHour] = useState("9");
@@ -252,6 +255,7 @@ export function AvailabilityCalendar({
   const minutes = ["00", "15", "30", "45"];
   const selectedDateSlots = selectedDate ? getAvailableSlots(selectedDate) : [];
   const selectedDateUnavailable = selectedDate ? isDateUnavailable(selectedDate) : false;
+  const isSelectedDatePast = selectedDate ? isDateInPast(selectedDate) : false;
   const availableDates = getDatesWithAvailability();
   const unavailableDates = getDatesUnavailable();
 
@@ -268,6 +272,7 @@ export function AvailabilityCalendar({
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
+              disabled={{ before: today }}
               className="rounded-md border w-full max-w-[280px]"
               modifiers={{
                 available: availableDates,
@@ -295,10 +300,17 @@ export function AvailabilityCalendar({
             {selectedDate && (
               <>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    {format(selectedDate, "MMMM d, yyyy")}
-                  </h3>
-                  {isEditable && (
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {format(selectedDate, "MMMM d, yyyy")}
+                    </h3>
+                    {isSelectedDatePast && (
+                      <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-past-date-notice">
+                        Past date — no changes allowed
+                      </p>
+                    )}
+                  </div>
+                  {isEditable && !isSelectedDatePast && (
                     selectedDateUnavailable ? (
                       <Button
                         variant="default"
@@ -346,17 +358,20 @@ export function AvailabilityCalendar({
                       <div className="space-y-2">
                         {selectedDateSlots.map((slot) => {
                           const slotIsSelected = isSlotSelected(slot.id);
+                          const isPast = isSelectedDatePast;
                           return (
                             <div
                               key={slot.id}
                               className={`flex items-center justify-between p-3 border rounded-md transition-colors ${
-                                isSelectable 
-                                  ? slotIsSelected
-                                    ? "border-primary bg-primary/10 cursor-pointer"
-                                    : "hover:border-primary/50 cursor-pointer hover-elevate"
-                                  : ""
+                                isPast
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : isSelectable 
+                                    ? slotIsSelected
+                                      ? "border-primary bg-primary/10 cursor-pointer"
+                                      : "hover:border-primary/50 cursor-pointer hover-elevate"
+                                    : ""
                               }`}
-                              onClick={() => isSelectable && toggleSlotSelection(slot)}
+                              onClick={() => isSelectable && !isPast && toggleSlotSelection(slot)}
                               data-testid={`slot-${slot.id}`}
                             >
                               <div className="flex items-center gap-2">
@@ -376,7 +391,7 @@ export function AvailabilityCalendar({
                                   {formatTimeDisplay(slot.startTime)} - {formatTimeDisplay(slot.endTime)}
                                 </Badge>
                               </div>
-                              {isEditable && (
+                              {isEditable && !isPast && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -398,7 +413,7 @@ export function AvailabilityCalendar({
                   </div>
                 )}
 
-                {isEditable && !selectedDateUnavailable && (
+                {isEditable && !selectedDateUnavailable && !isSelectedDatePast && (
                   <div className="pt-4 border-t space-y-4">
                     {!isAddingSlot ? (
                       <Button
