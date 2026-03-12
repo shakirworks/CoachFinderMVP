@@ -59,6 +59,16 @@ export default function CoachesList() {
   const [maxRate, setMaxRate] = useState("");
   const [, setLocation] = useLocation();
 
+  // Filter hint: visible for 15s then fades out
+  const [filterHintVisible, setFilterHintVisible] = useState(true);
+  const [filterHintFading, setFilterHintFading] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = setTimeout(() => setFilterHintFading(true), 14000);
+    const hideTimer = setTimeout(() => setFilterHintVisible(false), 15000);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, []);
+
   // Welcome dialog state
   const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [welcomeUserName, setWelcomeUserName] = useState("");
@@ -242,7 +252,7 @@ export default function CoachesList() {
             <div className="flex items-center gap-3">
               <CollapsibleTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   className="gap-2"
                   data-testid="button-filter-toggle"
@@ -257,6 +267,14 @@ export default function CoachesList() {
                   {isFilterOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </Button>
               </CollapsibleTrigger>
+              {filterHintVisible && (
+                <span
+                  className={`text-xs text-muted-foreground italic transition-opacity duration-1000 select-none pointer-events-none ${filterHintFading ? "opacity-0" : "opacity-100"}`}
+                  data-testid="text-filter-hint"
+                >
+                  Use filters to refine your search
+                </span>
+              )}
               
               {hasActiveFilters && (
                 <Button
