@@ -24,11 +24,7 @@ export default function ProfileSetup() {
     },
     onSuccess: (athlete: Athlete) => {
       setUserLocally(athlete, "athlete");
-      toast({
-        title: "Profile created!",
-        description: "Welcome! Browse our coaches below.",
-      });
-      setLocation("/coaches");
+      // Navigation is handled by the welcome dialog (or directly in setUserLocally if dismissed)
     },
     onError: (error: Error) => {
       toast({

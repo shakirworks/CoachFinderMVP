@@ -108,11 +108,7 @@ export default function Landing() {
     onSuccess: (data: Athlete | Coach) => {
       if (role === "athlete") {
         setUserLocally(data, "athlete");
-        toast({
-          title: "Welcome back!",
-          description: "Redirecting you to coaches list...",
-        });
-        setLocation("/coaches");
+        // Navigation is handled by the welcome dialog (or directly in setUserLocally if dismissed)
       } else {
         setUserLocally(data, "coach");
         toast({

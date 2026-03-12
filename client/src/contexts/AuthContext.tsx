@@ -153,11 +153,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSelectedWelcomeSport(null);
         setDontShowAgain(false);
         setShowWelcomeDialog(true);
+      } else {
+        // Already dismissed — navigate directly to coaches list
+        setLocation("/coaches");
       }
     } else {
       localStorage.setItem("currentCoach", JSON.stringify(user));
     }
-  }, []);
+  }, [setLocation]);
 
   useEffect(() => {
     refreshSession();
@@ -187,7 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
     }
     setShowWelcomeDialog(false);
-  }, [dontShowAgain]);
+    setLocation("/coaches");
+  }, [dontShowAgain, setLocation]);
 
   return (
     <AuthContext.Provider
