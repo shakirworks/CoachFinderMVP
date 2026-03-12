@@ -1400,12 +1400,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Verify checkout session and complete purchase
+  // Also acts as fulfillment fallback when the Stripe webhook hasn't fired yet
   app.get("/api/bookings/verify/:sessionId", async (req, res) => {
     try {
       const { sessionId } = req.params;
       const stripe = await getUncachableStripeClient();
       
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['payment_intent.latest_charge'],
+      });
       
       const purchaseId = session.metadata?.purchaseId;
       
@@ -1413,7 +1416,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (purchaseId) {
           const purchase = await storage.getPurchase(purchaseId);
           
-          // Get invoice for this purchase
+          // Fallback fulfillment: if purchase is still pending the webhook hasn't fired yet
+          if (purchase && purchase.status === 'pending') {
+            console.log(`[verify] Webhook hasn't fired yet — fulfilling purchase ${purchaseId} inline`);
+            
+            // Fetch Stripe-hosted receipt URL
+            let receiptUrl: string | null = null;
+            try {
+              const pi = session.payment_intent as any;
+              receiptUrl = pi?.latest_charge?.receipt_url || null;
+            } catch {}
+
+            await storage.updatePurchaseStatus(purchaseId, 'succeeded', session.payment_intent as string);
+
+            const athlete = await storage.getAthlete(purchase.athleteId);
+            const coach = await storage.getCoach(purchase.coachId);
+
+            if (athlete && coach) {
+              const selectedSlots = purchase.selectedSlots as Array<{
+                slotId: string; date: string; startTime: string; endTime: string;
+              }>;
+
+              const invoiceNumber = await storage.generateInvoiceNumber();
+              await storage.createInvoice({
+                purchaseId,
+                invoiceNumber,
+                athleteId: purchase.athleteId,
+                coachId: purchase.coachId,
+                athleteName: athlete.name,
+                athleteEmail: athlete.email,
+                coachName: coach.name,
+                coachEmail: coach.email,
+                subtotal: purchase.subtotal,
+                serviceFee: purchase.serviceFee,
+                taxAmount: purchase.taxAmount,
+                totalAmount: purchase.totalAmount,
+                currency: purchase.currency,
+                sessionDetails: selectedSlots,
+                paidAt: new Date(),
+                providerReceiptUrl: receiptUrl,
+                metadata: {
+                  sessionId,
+                  paymentIntent: session.payment_intent,
+                  amountTotal: session.amount_total,
+                  currency: session.currency,
+                },
+              });
+
+              // Remove booked slots from availability
+              const slotIds = selectedSlots.map(s => s.slotId);
+              await storage.deleteAvailabilitySlotsByIds(slotIds);
+
+              // Notify the coach
+              const sessionCount = selectedSlots.length;
+              const coachAmount = (purchase.subtotal / 100).toFixed(2);
+              await storage.createNotification({
+                recipientId: purchase.coachId,
+                recipientType: 'coach',
+                type: 'new_booking',
+                title: 'New Booking Received!',
+                message: `${athlete.name} booked ${sessionCount} session${sessionCount > 1 ? 's' : ''} with you. You'll receive CA$${coachAmount} directly to your Stripe account.`,
+                data: {
+                  purchaseId,
+                  athleteId: purchase.athleteId,
+                  athleteName: athlete.name,
+                  athleteEmail: athlete.email,
+                  sessionCount,
+                  totalAmount: purchase.totalAmount,
+                  coachAmount: purchase.subtotal,
+                  sessions: selectedSlots,
+                },
+              });
+              console.log(`[verify] Fulfilled purchase ${purchaseId} and notified coach ${purchase.coachId}`);
+            }
+          }
+
+          // Return invoice details
           const invoice = await storage.getInvoiceByPurchase(purchaseId);
           
           res.json({ 
@@ -1422,6 +1500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             purchaseId,
             invoiceId: invoice?.id,
             invoiceNumber: invoice?.invoiceNumber,
+            receiptUrl: invoice?.providerReceiptUrl || null,
           });
         } else {
           res.json({ 

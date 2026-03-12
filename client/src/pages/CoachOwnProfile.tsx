@@ -748,15 +748,28 @@ export default function CoachOwnProfile() {
                                   ${(invoice.subtotal / 100).toFixed(2)}
                                 </p>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(`/api/invoices/${invoice.id}/receipt`, '_blank')}
-                                data-testid={`button-view-receipt-${invoice.id}`}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Receipt
-                              </Button>
+                              <div className="flex flex-wrap gap-2 justify-end">
+                                {invoice.providerReceiptUrl && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => window.open(invoice.providerReceiptUrl!, '_blank')}
+                                    data-testid={`button-stripe-receipt-${invoice.id}`}
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Stripe Receipt
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(`/api/invoices/${invoice.id}/receipt`, '_blank')}
+                                  data-testid={`button-view-receipt-${invoice.id}`}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Receipt
+                                </Button>
+                              </div>
                             </div>
                           </div>
                           {invoice.issuedAt && (

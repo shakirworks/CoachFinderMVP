@@ -8,7 +8,7 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
   const stripe = await getUncachableStripeClient();
   
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ['line_items'],
+    expand: ['line_items', 'payment_intent.latest_charge'],
   });
   
   if (session.payment_status === 'unpaid') {
@@ -38,6 +38,14 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     'succeeded',
     session.payment_intent as string
   );
+
+  // Fetch Stripe-hosted receipt URL from the charge
+  let receiptUrl: string | null = null;
+  try {
+    const pi = session.payment_intent as Stripe.PaymentIntent;
+    const charge = pi?.latest_charge as Stripe.Charge;
+    receiptUrl = charge?.receipt_url || null;
+  } catch {}
   
   const athlete = await storage.getAthlete(purchase.athleteId);
   const coach = await storage.getCoach(purchase.coachId);
@@ -71,7 +79,7 @@ async function fulfillCheckout(sessionId: string): Promise<void> {
     currency: purchase.currency,
     sessionDetails: selectedSlots,
     paidAt: new Date(),
-    providerReceiptUrl: null,
+    providerReceiptUrl: receiptUrl,
     metadata: { 
       sessionId, 
       paymentIntent: session.payment_intent,
