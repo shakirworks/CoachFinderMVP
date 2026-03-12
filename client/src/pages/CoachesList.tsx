@@ -28,9 +28,18 @@ import type { Coach, Athlete } from "@shared/schema";
 import { useState, useEffect } from "react";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 
+const WELCOME_SPORT_KEY = "coachfinders_search_sport";
+
 export default function CoachesList() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [selectedSport, setSelectedSport] = useState<string | null>(() => {
+    const stored = localStorage.getItem(WELCOME_SPORT_KEY);
+    if (stored) {
+      localStorage.removeItem(WELCOME_SPORT_KEY);
+      return stored;
+    }
+    return null;
+  });
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
