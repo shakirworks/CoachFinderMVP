@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Dumbbell, BellRing } from "lucide-react";
+import { Dumbbell, ClipboardList } from "lucide-react";
 
 interface RoleSelectionCardProps {
   role: "athlete" | "coach";
@@ -19,7 +19,7 @@ export default function RoleSelectionCard({ role, onSelect }: RoleSelectionCardP
         {isAthlete ? (
           <Dumbbell className="w-10 h-10 text-primary" />
         ) : (
-          <BellRing className="w-10 h-10 text-primary" />
+          <ClipboardList className="w-10 h-10 text-primary" />
         )}
       </div>
       <div className="text-center">

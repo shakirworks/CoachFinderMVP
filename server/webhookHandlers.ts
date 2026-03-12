@@ -1,4 +1,4 @@
-import { getUncachableStripeClient } from './stripeClient';
+import { getUncachableStripeClient, getV2Headers } from './stripeClient';
 import { storage } from './storage';
 import Stripe from 'stripe';
 
@@ -159,11 +159,7 @@ async function handleV2AccountUpdate(accountId: string): Promise<void> {
       'GET',
       `/v2/core/accounts/${accountId}?include[]=configuration.merchant&include[]=requirements`,
       undefined,
-      {
-        additionalHeaders: {
-          'Stripe-Version': '2025-12-15.preview',
-        },
-      }
+      getV2Headers()
     );
     
     const account = accountResponse as any;

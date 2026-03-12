@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import express from "express";
 import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
-import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { getUncachableStripeClient, getStripePublishableKey, getV2Headers } from "./stripeClient";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { sendVerificationCode, sendWelcomeVerification, sendPasswordResetEmail } from "./email";
@@ -26,7 +26,7 @@ const HST_PERCENTAGE = 0.13;
 // V2 accounts need the 'stripe_balance.stripe_transfers' recipient capability.
 // V1 accounts need the 'transfers' capability.  We request both to cover all cases.
 async function requestStripeTransfersCapability(stripe: Awaited<ReturnType<typeof getUncachableStripeClient>>, accountId: string): Promise<void> {
-  const v2Headers = { additionalHeaders: { 'Stripe-Version': '2025-12-15.preview' } };
+  const v2Headers = getV2Headers();
 
   // Try V2: recipient.capabilities.stripe_balance.stripe_transfers
   try {
@@ -904,11 +904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!accountId) {
         // Try V2 API first, fall back to V1 if V2 isn't enabled
         try {
-          const v2Headers = {
-            additionalHeaders: {
-              'Stripe-Version': '2025-12-15.preview',
-            },
-          };
+          const v2Headers = getV2Headers();
 
           const account = await stripe.rawRequest('POST', '/v2/core/accounts', {
             display_name: coach.name,
@@ -984,11 +980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let onboardingUrl: string;
 
       try {
-        const v2LinkHeaders = {
-          additionalHeaders: {
-            'Stripe-Version': '2025-12-15.preview',
-          },
-        };
+        const v2LinkHeaders = getV2Headers();
 
         const accountLinkResponse = await stripe.rawRequest('POST', '/v2/core/account_links', {
           account: accountId,
