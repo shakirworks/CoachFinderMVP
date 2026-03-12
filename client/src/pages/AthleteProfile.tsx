@@ -78,7 +78,7 @@ export default function AthleteProfile() {
     enabled: !!athlete?.id,
   });
 
-  const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
+  const { authenticated, user: authUser, role: authRole, loading: authLoading, logout } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
@@ -129,12 +129,11 @@ export default function AthleteProfile() {
       await apiRequest("DELETE", `/api/athletes/${athlete!.id}`);
     },
     onSuccess: () => {
-      localStorage.removeItem("currentAthlete");
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted.",
       });
-      setLocation("/");
+      logout();
     },
     onError: (error: Error) => {
       toast({
@@ -146,8 +145,7 @@ export default function AthleteProfile() {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem("currentAthlete");
-    setLocation("/");
+    logout();
   };
 
   const handleSave = () => {

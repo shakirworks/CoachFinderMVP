@@ -83,7 +83,7 @@ export default function CoachOwnProfile() {
     }
   }, []);
 
-  const { authenticated, user: authUser, role: authRole, loading: authLoading } = useAuth();
+  const { authenticated, user: authUser, role: authRole, loading: authLoading, logout } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
@@ -197,12 +197,11 @@ export default function CoachOwnProfile() {
       await apiRequest("DELETE", `/api/coaches/${coach!.id}`);
     },
     onSuccess: () => {
-      localStorage.removeItem("currentCoach");
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted.",
       });
-      setLocation("/");
+      logout();
     },
     onError: (error: Error) => {
       toast({
@@ -280,8 +279,7 @@ export default function CoachOwnProfile() {
   const unreadMessageCount = messageThreads.reduce((sum, t) => sum + t.unreadCount, 0);
 
   const handleLogout = () => {
-    localStorage.removeItem("currentCoach");
-    setLocation("/");
+    logout();
   };
 
   const handleSave = () => {
