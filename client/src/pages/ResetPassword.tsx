@@ -59,7 +59,7 @@ export default function ResetPassword() {
           <p className="text-muted-foreground mb-6">
             This password reset link is missing required information. Please request a new one.
           </p>
-          <Button onClick={() => navigate("/")} variant="outline">
+          <Button onClick={() => navigate(`/signup?mode=signin&role=${role}`)} variant="outline">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Sign In
           </Button>
@@ -79,7 +79,7 @@ export default function ResetPassword() {
           <p className="text-muted-foreground mb-6">
             Your password has been updated successfully. You can now sign in with your new password.
           </p>
-          <Button onClick={() => navigate("/?mode=signin")} data-testid="button-go-to-signin">
+          <Button onClick={() => navigate(`/signup?mode=signin&role=${role}`)} data-testid="button-go-to-signin">
             Sign In
           </Button>
         </div>
@@ -179,7 +179,7 @@ export default function ResetPassword() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(`/signup?mode=signin&role=${role}`)}
               data-testid="button-back-to-signin"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />

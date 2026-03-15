@@ -15,10 +15,16 @@ import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909
 
 export default function Landing() {
   const searchString = useSearch();
-  const isSignInMode = new URLSearchParams(searchString).get("mode") === "signin";
-  
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [role, setRole] = useState<"athlete" | "coach" | null>(null);
+  const urlParams = new URLSearchParams(searchString);
+  const isSignInMode = urlParams.get("mode") === "signin";
+  const roleFromUrl = urlParams.get("role") as "athlete" | "coach" | null;
+
+  const [step, setStep] = useState<1 | 2 | 3>(() =>
+    isSignInMode && (roleFromUrl === "athlete" || roleFromUrl === "coach") ? 2 : 1
+  );
+  const [role, setRole] = useState<"athlete" | "coach" | null>(() =>
+    isSignInMode && (roleFromUrl === "athlete" || roleFromUrl === "coach") ? roleFromUrl : null
+  );
   const [email, setEmail] = useState("");
   const [loginStep, setLoginStep] = useState<"credentials" | "verification">("credentials");
   const [loginError, setLoginError] = useState<string | null>(null);
