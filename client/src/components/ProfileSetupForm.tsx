@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import LocationInput from "./LocationInput";
+import type { Coords } from "@/lib/geocoding";
 import {
   Select,
   SelectContent,
@@ -22,7 +24,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SportsChip from "./SportsChip";
-import { Camera, MapPin, User, DollarSign, FileText, Upload, X, ImagePlus } from "lucide-react";
+import { Camera, User, DollarSign, FileText, Upload, X, ImagePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProfileSetupFormProps {
@@ -31,6 +33,8 @@ interface ProfileSetupFormProps {
   onSubmit: (profile: {
     name: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     sports: string[];
     profileImage?: string;
     certification?: string;
@@ -67,6 +71,7 @@ export default function ProfileSetupForm({
 }: ProfileSetupFormProps) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [coords, setCoords] = useState<Coords | null>(null);
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [availableForCoachRequests, setAvailableForCoachRequests] = useState(false);
   
@@ -170,6 +175,10 @@ export default function ProfileSetupForm({
     e.preventDefault();
     if (name && location && selectedSport) {
       const profile: any = { name, location, sports: [selectedSport] };
+      if (coords) {
+        profile.latitude = coords.lat;
+        profile.longitude = coords.lng;
+      }
       
       if (profileImageUrl) {
         profile.profileImage = profileImageUrl;
@@ -316,19 +325,14 @@ export default function ProfileSetupForm({
 
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="location"
-                type="text"
-                placeholder="City, Country"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="pl-10 h-12"
-                required
-                data-testid="input-location"
-              />
-            </div>
+            <LocationInput
+              id="location"
+              value={location}
+              onChange={(val, c) => { setLocation(val); setCoords(c); }}
+              placeholder="City, Country"
+              required
+              data-testid="input-location"
+            />
           </div>
 
           <div className="space-y-3">

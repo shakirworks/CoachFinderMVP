@@ -3,6 +3,8 @@ import { useAuth, WELCOME_DISMISSED_KEY, WELCOME_SHOW_KEY, WELCOME_USER_KEY } fr
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import LocationInput from "@/components/LocationInput";
+import type { Coords } from "@/lib/geocoding";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -57,6 +59,9 @@ export default function CoachesList() {
   const [selectedCoachingTypes, setSelectedCoachingTypes] = useState<string[]>([]);
   const [minRate, setMinRate] = useState("");
   const [maxRate, setMaxRate] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [locationCoords, setLocationCoords] = useState<Coords | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [, setLocation] = useLocation();
 
   // Filter hint: visible for 15s then fades out
@@ -120,8 +125,20 @@ export default function CoachesList() {
     }
   }, [authLoading, authenticated, authUser, authRole]);
 
+  const coachesQueryKey = locationCoords && radiusKm !== null
+    ? ["/api/coaches", { lat: locationCoords.lat, lng: locationCoords.lng, radius: radiusKm }]
+    : ["/api/coaches"];
+
   const { data: coaches, isLoading } = useQuery<Coach[]>({
-    queryKey: ["/api/coaches"],
+    queryKey: coachesQueryKey,
+    queryFn: async () => {
+      let url = "/api/coaches";
+      if (locationCoords && radiusKm !== null) {
+        url += `?lat=${locationCoords.lat}&lng=${locationCoords.lng}&radius=${radiusKm}`;
+      }
+      const res = await fetch(url);
+      return res.json();
+    },
   });
 
   const studentLevelOptions = ["Beginner", "Intermediate", "Advanced"];
@@ -145,9 +162,12 @@ export default function CoachesList() {
     setMinRate("");
     setMaxRate("");
     setSelectedSport(null);
+    setLocationFilter("");
+    setLocationCoords(null);
+    setRadiusKm(null);
   };
 
-  const hasActiveFilters = selectedLevels.length > 0 || selectedCoachingTypes.length > 0 || minRate || maxRate || selectedSport;
+  const hasActiveFilters = selectedLevels.length > 0 || selectedCoachingTypes.length > 0 || minRate || maxRate || selectedSport || (locationCoords !== null && radiusKm !== null);
 
   const filteredCoaches = coaches?.filter((coach) => {
     const matchesSearch = coach.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -261,7 +281,7 @@ export default function CoachesList() {
                   Filters
                   {hasActiveFilters && (
                     <Badge variant="secondary" className="ml-1">
-                      {(selectedLevels.length + selectedCoachingTypes.length + (selectedSport ? 1 : 0) + (minRate ? 1 : 0) + (maxRate ? 1 : 0))}
+                      {(selectedLevels.length + selectedCoachingTypes.length + (selectedSport ? 1 : 0) + (minRate ? 1 : 0) + (maxRate ? 1 : 0) + (locationCoords && radiusKm !== null ? 1 : 0))}
                     </Badge>
                   )}
                   {isFilterOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -385,6 +405,63 @@ export default function CoachesList() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="mt-6 pt-5 border-t">
+                    <Label className="text-sm font-medium mb-3 block">Location &amp; Distance</Label>
+                    <div className="flex flex-wrap items-start gap-4">
+                      <div className="flex-1 min-w-[200px]">
+                        <LocationInput
+                          value={locationFilter}
+                          onChange={(val, c) => {
+                            setLocationFilter(val);
+                            setLocationCoords(c);
+                            if (c && radiusKm === null) setRadiusKm(25);
+                            if (!c) setRadiusKm(null);
+                          }}
+                          placeholder="Search near a location..."
+                          data-testid="input-location-filter"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {[10, 25, 50].map((km) => (
+                          <Button
+                            key={km}
+                            size="sm"
+                            variant={radiusKm === km && locationCoords ? "default" : "outline"}
+                            onClick={() => {
+                              if (locationCoords) setRadiusKm(km);
+                            }}
+                            disabled={!locationCoords}
+                            data-testid={`button-radius-${km}`}
+                          >
+                            {km} km
+                          </Button>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant={radiusKm === null || !locationCoords ? "default" : "outline"}
+                          onClick={() => {
+                            setLocationFilter("");
+                            setLocationCoords(null);
+                            setRadiusKm(null);
+                          }}
+                          data-testid="button-radius-any"
+                        >
+                          Any
+                        </Button>
+                      </div>
+                    </div>
+                    {locationFilter && !locationCoords && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Keep typing or use "Near me" to enable distance filtering
+                      </p>
+                    )}
+                    {locationCoords && radiusKm !== null && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Showing coaches within {radiusKm} km of {locationFilter}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

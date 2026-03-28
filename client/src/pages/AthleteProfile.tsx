@@ -33,6 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2, Calendar, Clock, Download, CreditCard, Loader2 } from "lucide-react";
 import type { Athlete, Coach, Message, Invoice } from "@shared/schema";
+import LocationInput from "@/components/LocationInput";
+import type { Coords } from "@/lib/geocoding";
 import { formatDistanceToNow } from "date-fns";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
@@ -43,6 +45,7 @@ export default function AthleteProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
+  const [editedCoords, setEditedCoords] = useState<Coords | null>(null);
   const [editedSport, setEditedSport] = useState("");
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -102,7 +105,7 @@ export default function AthleteProfile() {
   }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; location: string; sport: string }) => {
+    mutationFn: async (updates: { name: string; location: string; sport: string; latitude?: number; longitude?: number }) => {
       const res = await apiRequest("PATCH", `/api/athletes/${athlete!.id}`, updates);
       return await res.json();
     },
@@ -162,6 +165,7 @@ export default function AthleteProfile() {
       name: editedName,
       location: editedLocation,
       sport: editedSport,
+      ...(editedCoords ? { latitude: editedCoords.lat, longitude: editedCoords.lng } : {}),
     });
   };
 
@@ -275,10 +279,11 @@ export default function AthleteProfile() {
 
                     <div className="space-y-2">
                       <Label htmlFor="location">Location</Label>
-                      <Input
+                      <LocationInput
                         id="location"
                         value={editedLocation}
-                        onChange={(e) => setEditedLocation(e.target.value)}
+                        onChange={(val, c) => { setEditedLocation(val); setEditedCoords(c); }}
+                        placeholder="City, Country"
                         data-testid="input-edit-location"
                       />
                     </div>

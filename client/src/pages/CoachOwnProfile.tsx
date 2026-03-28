@@ -42,6 +42,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar } from "lucide-react";
 import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/schema";
+import LocationInput from "@/components/LocationInput";
+import type { Coords } from "@/lib/geocoding";
 import { formatDistanceToNow } from "date-fns";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 import athleteImage from "@assets/stock_images/tennis_player_athlet_960431b6.jpg";
@@ -60,6 +62,7 @@ export default function CoachOwnProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedLocation, setEditedLocation] = useState("");
+  const [editedCoords, setEditedCoords] = useState<Coords | null>(null);
   const [editedSport, setEditedSport] = useState("");
   const [editedBio, setEditedBio] = useState("");
   const [editedHourlyRate, setEditedHourlyRate] = useState("");
@@ -112,7 +115,7 @@ export default function CoachOwnProfile() {
   }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number }) => {
+    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number; latitude?: number; longitude?: number }) => {
       const res = await apiRequest("PATCH", `/api/coaches/${coach!.id}`, updates);
       return await res.json();
     },
@@ -298,6 +301,7 @@ export default function CoachOwnProfile() {
       sport: editedSport,
       bio: editedBio.trim() || undefined,
       hourlyRate: editedHourlyRate ? parseInt(editedHourlyRate) : undefined,
+      ...(editedCoords ? { latitude: editedCoords.lat, longitude: editedCoords.lng } : {}),
     });
   };
 
@@ -822,10 +826,10 @@ export default function CoachOwnProfile() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="location">Location *</Label>
-                    <Input
+                    <LocationInput
                       id="location"
                       value={editedLocation}
-                      onChange={(e) => setEditedLocation(e.target.value)}
+                      onChange={(val, c) => { setEditedLocation(val); setEditedCoords(c); }}
                       placeholder="City, State"
                       data-testid="input-edit-location"
                     />

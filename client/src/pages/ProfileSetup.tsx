@@ -60,6 +60,8 @@ export default function ProfileSetup() {
   const handleProfileSubmit = (profile: {
     name: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     sports: string[];
     profileImage?: string;
     certification?: string;
@@ -79,6 +81,8 @@ export default function ProfileSetup() {
       name: profile.name,
       sport: profile.sports[0],
       location: profile.location,
+      latitude: profile.latitude,
+      longitude: profile.longitude,
       email,
       password: "placeholder",
       verificationToken: token,

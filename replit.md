@@ -24,8 +24,8 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage Solutions
 - **Database**: PostgreSQL (via Drizzle ORM and Neon serverless driver).
 - **Schema**:
-    - **Athletes**: `id`, `name`, `sport`, `location`, `email`, `password`, `emailVerified`, `profileImage`, `availableForCoachRequests`, `gender`, `age`, `skillLevel`, `preferredCoachGender`.
-    - **Coaches**: `id`, `name`, `sport`, `location`, `email`, `password`, `emailVerified`, `profileImage`, `hourly_rate`, `coaching_options` (array), `years_of_experience`, `student_levels` (array), `stripeAccountId`, `stripeAccountStatus`, `stripeOnboardingComplete`.
+    - **Athletes**: `id`, `name`, `sport`, `location`, `latitude` (real, nullable), `longitude` (real, nullable), `email`, `password`, `emailVerified`, `profileImage`, `availableForCoachRequests`, `gender`, `age`, `skillLevel`, `preferredCoachGender`.
+    - **Coaches**: `id`, `name`, `sport`, `location`, `latitude` (real, nullable), `longitude` (real, nullable), `email`, `password`, `emailVerified`, `profileImage`, `hourly_rate`, `coaching_options` (array), `years_of_experience`, `student_levels` (array), `stripeAccountId`, `stripeAccountStatus`, `stripeOnboardingComplete`.
     - **Verification Codes**: `id`, `email`, `code`, `role`, `type` (login/signup), `hashedPassword`, `expiresAt`, `used`.
     - **Messages**: `id`, `athleteId`, `coachId`, `message`, `senderType`, `createdAt`.
     - **Purchases**: `id`, `athleteId`, `coachId`, `subtotal`, `serviceFee`, `totalAmount`, `status`, `selectedSlots`.

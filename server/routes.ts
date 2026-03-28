@@ -387,11 +387,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all coaches
+  // Get all coaches (with optional distance filter: ?lat=&lng=&radius=km)
   app.get("/api/coaches", async (req, res) => {
     try {
       const coaches = await storage.getAllCoaches();
-      const safeCoaches = coaches.map(({ password: _, ...c }) => c);
+      let safeCoaches = coaches.map(({ password: _, ...c }) => c);
+
+      const lat = req.query.lat ? parseFloat(req.query.lat as string) : null;
+      const lng = req.query.lng ? parseFloat(req.query.lng as string) : null;
+      const radius = req.query.radius ? parseFloat(req.query.radius as string) : null;
+
+      if (lat !== null && lng !== null && radius !== null && !isNaN(lat) && !isNaN(lng) && !isNaN(radius)) {
+        safeCoaches = safeCoaches.filter((coach) => {
+          if (coach.latitude == null || coach.longitude == null) return false;
+          const R = 6371;
+          const dLat = ((coach.latitude - lat) * Math.PI) / 180;
+          const dLng = ((coach.longitude - lng) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos((lat * Math.PI) / 180) *
+              Math.cos((coach.latitude * Math.PI) / 180) *
+              Math.sin(dLng / 2) ** 2;
+          const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return dist <= radius;
+        });
+      }
+
       res.json(safeCoaches);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

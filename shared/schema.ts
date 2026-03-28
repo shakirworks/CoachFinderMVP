@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,6 +17,8 @@ export const athletes = pgTable("athletes", {
   age: text("age"),
   skillLevel: text("skill_level"),
   preferredCoachGender: text("preferred_coach_gender"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
 });
 
 export const coaches = pgTable("coaches", {
@@ -40,6 +42,8 @@ export const coaches = pgTable("coaches", {
   stripeAccountId: text("stripe_account_id"),
   stripeAccountStatus: text("stripe_account_status"),
   stripeOnboardingComplete: text("stripe_onboarding_complete"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
 });
 
 export const messages = pgTable("messages", {
