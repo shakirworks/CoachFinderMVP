@@ -24,7 +24,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SportsChip from "./SportsChip";
-import { Camera, User, DollarSign, FileText, Upload, X, ImagePlus } from "lucide-react";
+import { Camera, User, DollarSign, FileText, Upload, X, ImagePlus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProfileSetupFormProps {
@@ -38,6 +38,7 @@ interface ProfileSetupFormProps {
     sports: string[];
     profileImage?: string;
     certification?: string;
+    certificationFileUrl?: string;
     performanceLevel?: string;
     age?: string;
     gender?: string;
@@ -98,6 +99,10 @@ export default function ProfileSetupForm({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [certificationFileUrl, setCertificationFileUrl] = useState<string | null>(null);
+  const [certFileName, setCertFileName] = useState<string | null>(null);
+  const [isCertUploading, setIsCertUploading] = useState(false);
+  const certFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const uploadFile = useCallback(async (file: File) => {
@@ -151,6 +156,41 @@ export default function ProfileSetupForm({
     if (file) uploadFile(file);
   }, [uploadFile]);
 
+  const uploadCertification = useCallback(async (file: File) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      toast({ title: "Invalid file", description: "Please upload a PDF or image file (JPEG, PNG, WebP).", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload a file under 10MB.", variant: "destructive" });
+      return;
+    }
+    setIsCertUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("certification", file);
+      const res = await fetch("/api/upload/certification", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setCertificationFileUrl(data.url);
+      setCertFileName(file.name);
+      toast({ title: "Certification uploaded", description: "Your certification document has been attached." });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsCertUploading(false);
+    }
+  }, [toast]);
+
+  const handleCertFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadCertification(file);
+  }, [uploadCertification]);
+
   const handleSportToggle = (sport: string) => {
     setSelectedSport(sport);
   };
@@ -194,6 +234,7 @@ export default function ProfileSetupForm({
       
       if (role === "coach") {
         profile.certification = certification;
+        if (certificationFileUrl) profile.certificationFileUrl = certificationFileUrl;
         profile.performanceLevel = performanceLevel;
         profile.age = age;
         profile.gender = gender;
@@ -561,18 +602,62 @@ export default function ProfileSetupForm({
 
           {role === "coach" && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="certification">Certification</Label>
-                <Input
-                  id="certification"
-                  type="text"
-                  placeholder="e.g., USSF A License, PTR Certified"
-                  value={certification}
-                  onChange={(e) => setCertification(e.target.value)}
-                  className="h-12"
-                  data-testid="input-certification"
-                />
-                <p className="text-xs text-muted-foreground">Optional</p>
+              <div className="space-y-3">
+                <Label>Certification</Label>
+                <p className="text-xs text-muted-foreground -mt-1">Attach a credential that will be visible to athletes</p>
+                <div className="space-y-2">
+                  <Input
+                    id="certification"
+                    type="text"
+                    placeholder="Title, e.g. USSF A License, PTR Certified"
+                    value={certification}
+                    onChange={(e) => setCertification(e.target.value)}
+                    className="h-12"
+                    data-testid="input-certification"
+                  />
+                </div>
+                <div>
+                  <input
+                    ref={certFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    className="hidden"
+                    onChange={handleCertFileSelect}
+                    data-testid="input-certification-file"
+                  />
+                  {certificationFileUrl ? (
+                    <div className="flex items-center gap-3 p-3 rounded-md border bg-muted/40">
+                      <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="text-sm text-foreground truncate flex-1">{certFileName}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => { setCertificationFileUrl(null); setCertFileName(null); if (certFileInputRef.current) certFileInputRef.current.value = ""; }}
+                        data-testid="button-remove-cert-file"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => certFileInputRef.current?.click()}
+                      disabled={isCertUploading}
+                      data-testid="button-upload-cert-file"
+                    >
+                      {isCertUploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      {isCertUploading ? "Uploading..." : "Attach Certification Document"}
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">PDF or image, max 10 MB. Optional.</p>
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -40,7 +40,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageNotificationListener from "@/components/MessageNotificationListener";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar } from "lucide-react";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar, Award } from "lucide-react";
 import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/schema";
 import LocationInput from "@/components/LocationInput";
 import type { Coords } from "@/lib/geocoding";
@@ -873,6 +873,32 @@ export default function CoachOwnProfile() {
                     data-testid="input-edit-bio"
                   />
                 </div>
+
+                {(coach.certification || coach.certificationFileUrl) && (
+                  <div className="space-y-2 pt-2">
+                    <Label>Certification</Label>
+                    <div className="flex items-start gap-3 p-4 bg-muted/40 rounded-lg border">
+                      <Award className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        {coach.certification && (
+                          <p className="font-medium text-sm" data-testid="text-cert-title">{coach.certification}</p>
+                        )}
+                        {coach.certificationFileUrl && (
+                          <a
+                            href={coach.certificationFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                            data-testid="link-cert-file"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View certification document
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-2 pt-4">
                   <Button

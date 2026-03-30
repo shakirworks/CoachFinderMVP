@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, MessageCircle, User, DollarSign } from "lucide-react";
+import { MapPin, MessageCircle, User, DollarSign, Award } from "lucide-react";
 import type { Coach } from "@shared/schema";
 import coachImage from "@assets/stock_images/coach_mentor_trainer_f4712e56.jpg";
 
@@ -54,9 +54,12 @@ export default function CoachCard({ coach, onMessage, onViewProfile }: CoachCard
             )}
           </div>
           {coach.certification && (
-            <p className="text-xs text-muted-foreground mt-2 line-clamp-1" data-testid="text-coach-cert-preview">
-              {coach.certification}
-            </p>
+            <div className="flex items-center gap-1 mt-2" data-testid="badge-coach-certification">
+              <Award className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+              <span className="text-xs font-medium text-amber-700 dark:text-amber-500 line-clamp-1">
+                {coach.certification}
+              </span>
+            </div>
           )}
         </div>
       </div>

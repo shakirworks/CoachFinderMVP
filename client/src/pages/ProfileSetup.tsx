@@ -65,6 +65,7 @@ export default function ProfileSetup() {
     sports: string[];
     profileImage?: string;
     certification?: string;
+    certificationFileUrl?: string;
     performanceLevel?: string;
     age?: string;
     gender?: string;
@@ -99,6 +100,7 @@ export default function ProfileSetup() {
 
     if (role === "coach") {
       data.certification = profile.certification;
+      data.certificationFileUrl = profile.certificationFileUrl;
       data.performanceLevel = profile.performanceLevel;
       data.age = profile.age;
       data.gender = profile.gender;

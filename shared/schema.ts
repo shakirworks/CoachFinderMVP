@@ -31,6 +31,7 @@ export const coaches = pgTable("coaches", {
   emailVerified: text("email_verified").default("false"),
   profileImage: text("profile_image"),
   certification: text("certification"),
+  certificationFileUrl: text("certification_file_url"),
   performanceLevel: text("performance_level"),
   age: text("age"),
   gender: text("gender"),
