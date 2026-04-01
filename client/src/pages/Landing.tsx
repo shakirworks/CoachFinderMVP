@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -160,6 +160,15 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <header className="w-full border-b px-6 py-3 flex items-center">
+        <Link href="/" data-testid="link-back-to-home">
+          <Button variant="ghost" size="sm" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+        </Link>
+      </header>
+
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-4xl">
           {step === 1 && (
