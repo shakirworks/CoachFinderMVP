@@ -50,6 +50,7 @@ interface ProfileSetupFormProps {
     availableForCoachRequests?: boolean;
     skillLevel?: string;
     preferredCoachGender?: string;
+    trainingLocation?: string;
   }) => void;
   onBack: () => void;
 }
@@ -82,6 +83,7 @@ export default function ProfileSetupForm({
   const [preferredCoachGender, setPreferredCoachGender] = useState("");
   
   const [certification, setCertification] = useState("");
+  const [trainingLocation, setTrainingLocation] = useState("");
   const [performanceLevel, setPerformanceLevel] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
@@ -243,6 +245,7 @@ export default function ProfileSetupForm({
         profile.coachingOptions = coachingOptions.length > 0 ? coachingOptions : undefined;
         profile.yearsOfExperience = yearsOfExperience;
         profile.studentLevels = studentLevels.length > 0 ? studentLevels : undefined;
+        profile.trainingLocation = trainingLocation || undefined;
       }
       
       onSubmit(profile);
@@ -365,16 +368,33 @@ export default function ProfileSetupForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">City</Label>
+            <p className="text-xs text-muted-foreground">Your city or region — used to match you with nearby {role === "coach" ? "athletes" : "coaches"}. Use the GPS button or type your city.</p>
             <LocationInput
               id="location"
               value={location}
               onChange={(val, c) => { setLocation(val); setCoords(c); }}
-              placeholder="City, Country"
+              placeholder="e.g. Toronto, ON"
               required
               data-testid="input-location"
             />
           </div>
+
+          {role === "coach" && (
+            <div className="space-y-2">
+              <Label htmlFor="trainingLocation">Training Location</Label>
+              <p className="text-xs text-muted-foreground">Where do you train athletes? E.g. a club, court, gym, or park name and area.</p>
+              <Input
+                id="trainingLocation"
+                type="text"
+                placeholder="e.g. Thornhill Tennis Club, Richmond Hill ON"
+                value={trainingLocation}
+                onChange={(e) => setTrainingLocation(e.target.value)}
+                className="h-12"
+                data-testid="input-training-location"
+              />
+            </div>
+          )}
 
           <div className="space-y-3">
             <Label>Your Sport</Label>

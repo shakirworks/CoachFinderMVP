@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MapPin, LocateFixed, Loader2 } from "lucide-react";
 import { geocodeCity, reverseGeocode, type Coords } from "@/lib/geocoding";
+import { useToast } from "@/hooks/use-toast";
 
 interface LocationInputProps {
   value: string;
@@ -26,6 +27,7 @@ export default function LocationInput({
   const [locating, setLocating] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
 
   const handleTextChange = (text: string) => {
     onChange(text, null);
@@ -40,19 +42,52 @@ export default function LocationInput({
   };
 
   const handleNearMe = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast({
+        title: "Location not supported",
+        description: "Your browser doesn't support location access. Please type your city manually.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        const city = await reverseGeocode(lat, lng);
-        setLocating(false);
-        onChange(city, { lat, lng });
+        try {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const city = await reverseGeocode(lat, lng);
+          setLocating(false);
+          onChange(city, { lat, lng });
+          toast({
+            title: "Location detected",
+            description: `Set to ${city}`,
+          });
+        } catch {
+          setLocating(false);
+          toast({
+            title: "Could not detect city",
+            description: "Location found but city name lookup failed. Please type your city manually.",
+            variant: "destructive",
+          });
+        }
       },
-      () => {
+      (err) => {
         setLocating(false);
+        let description = "Please type your city manually.";
+        if (err.code === 1) {
+          description = "Location permission was denied. Please allow location access in your browser settings, or type your city manually.";
+        } else if (err.code === 2) {
+          description = "Your location could not be determined. Please type your city manually.";
+        } else if (err.code === 3) {
+          description = "Location request timed out. Please type your city manually.";
+        }
+        toast({
+          title: "Location access failed",
+          description,
+          variant: "destructive",
+        });
       },
-      { timeout: 8000 }
+      { timeout: 10000, enableHighAccuracy: false }
     );
   };
 

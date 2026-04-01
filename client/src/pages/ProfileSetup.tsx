@@ -77,6 +77,7 @@ export default function ProfileSetup() {
     availableForCoachRequests?: boolean;
     skillLevel?: string;
     preferredCoachGender?: string;
+    trainingLocation?: string;
   }) => {
     const data: Record<string, unknown> = {
       name: profile.name,
@@ -109,6 +110,7 @@ export default function ProfileSetup() {
       data.coachingOptions = profile.coachingOptions;
       data.yearsOfExperience = profile.yearsOfExperience;
       data.studentLevels = profile.studentLevels;
+      data.trainingLocation = profile.trainingLocation;
     }
 
     if (role === "athlete") {

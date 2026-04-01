@@ -45,6 +45,7 @@ export const coaches = pgTable("coaches", {
   stripeOnboardingComplete: text("stripe_onboarding_complete"),
   latitude: real("latitude"),
   longitude: real("longitude"),
+  trainingLocation: text("training_location"),
 });
 
 export const messages = pgTable("messages", {

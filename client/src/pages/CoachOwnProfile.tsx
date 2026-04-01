@@ -66,6 +66,7 @@ export default function CoachOwnProfile() {
   const [editedSport, setEditedSport] = useState("");
   const [editedBio, setEditedBio] = useState("");
   const [editedHourlyRate, setEditedHourlyRate] = useState("");
+  const [editedTrainingLocation, setEditedTrainingLocation] = useState("");
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('availability');
   const { toast } = useToast();
@@ -98,6 +99,7 @@ export default function CoachOwnProfile() {
       setEditedSport(coachUser.sport || "");
       setEditedBio(coachUser.bio || "");
       setEditedHourlyRate(coachUser.hourlyRate?.toString() || "");
+      setEditedTrainingLocation(coachUser.trainingLocation || "");
     } else {
       const coachData = localStorage.getItem("currentCoach");
       if (coachData) {
@@ -108,6 +110,7 @@ export default function CoachOwnProfile() {
         setEditedSport(parsedCoach.sport || "");
         setEditedBio(parsedCoach.bio || "");
         setEditedHourlyRate(parsedCoach.hourlyRate?.toString() || "");
+        setEditedTrainingLocation(parsedCoach.trainingLocation || "");
       } else {
         setLocation("/");
       }
@@ -115,7 +118,7 @@ export default function CoachOwnProfile() {
   }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number; latitude?: number; longitude?: number }) => {
+    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number; latitude?: number; longitude?: number; trainingLocation?: string }) => {
       const res = await apiRequest("PATCH", `/api/coaches/${coach!.id}`, updates);
       return await res.json();
     },
@@ -301,6 +304,7 @@ export default function CoachOwnProfile() {
       sport: editedSport,
       bio: editedBio.trim() || undefined,
       hourlyRate: editedHourlyRate ? parseInt(editedHourlyRate) : undefined,
+      trainingLocation: editedTrainingLocation.trim() || undefined,
       ...(editedCoords ? { latitude: editedCoords.lat, longitude: editedCoords.lng } : {}),
     });
   };
@@ -863,6 +867,18 @@ export default function CoachOwnProfile() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="trainingLocation">Training Location</Label>
+                  <p className="text-xs text-muted-foreground">Where do you train athletes? E.g. a club, court, gym, or park name and area.</p>
+                  <Input
+                    id="trainingLocation"
+                    value={editedTrainingLocation}
+                    onChange={(e) => setEditedTrainingLocation(e.target.value)}
+                    placeholder="e.g. Thornhill Tennis Club, Richmond Hill ON"
+                    data-testid="input-edit-training-location"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
@@ -916,6 +932,7 @@ export default function CoachOwnProfile() {
                       setEditedSport(coach.sport);
                       setEditedBio(coach.bio || "");
                       setEditedHourlyRate(coach.hourlyRate?.toString() || "");
+                      setEditedTrainingLocation(coach.trainingLocation || "");
                     }}
                     data-testid="button-cancel-edit"
                   >
