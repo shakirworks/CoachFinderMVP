@@ -383,7 +383,7 @@ export default function ProfileSetupForm({
           {role === "coach" && (
             <div className="space-y-2">
               <Label htmlFor="trainingLocation">Training Location</Label>
-              <p className="text-xs text-muted-foreground">Where do you train athletes? E.g. a club, court, gym, or park name and area.</p>
+              <p className="text-xs text-muted-foreground">Please provide your training location</p>
               <Input
                 id="trainingLocation"
                 type="text"
