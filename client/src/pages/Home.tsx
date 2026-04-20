@@ -8,7 +8,7 @@ import heroImage from "@assets/photo-1634840542403-1a9b1067aaa0_1771127392745.av
 import coachingImage from "@assets/premium_photo-1683133666522-15d8b06501b3_1771128470313.avif";
 import athleteImage from "@assets/photo-1711066444066-c7edf6ee7092_1771128881958.avif";
 import logoImage from "@assets/CoachFinders_image-removebg-preview_1771126900909.png";
-import badgeImage from "@assets/Gemini_Generated_Image_weahysweahysweah_1771129690200.png";
+
 import SiteFooter from "@/components/SiteFooter";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,8 +32,7 @@ export default function Home() {
             aria-label="Back to top"
             data-testid="link-home-logo"
           >
-            <img src={badgeImage} alt="CoachFinders badge" className="h-10 w-10 rounded-full object-cover" data-testid="img-header-badge" />
-            <img src={logoImage} alt="CoachFinders" className="h-8 w-auto hidden sm:block" data-testid="img-header-logo" />
+            <img src={logoImage} alt="CoachFinders" className="h-8 w-auto" data-testid="img-header-logo" />
           </button>
           <div className="hidden md:flex items-center gap-4">
             <Button variant="ghost" onClick={() => scrollToSection("about")} data-testid="button-about-nav">
