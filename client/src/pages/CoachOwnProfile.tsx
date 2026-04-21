@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageNotificationListener from "@/components/MessageNotificationListener";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar, Award } from "lucide-react";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar, Award, Camera } from "lucide-react";
 import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/schema";
 import LocationInput from "@/components/LocationInput";
 import type { Coords } from "@/lib/geocoding";
@@ -67,6 +67,9 @@ export default function CoachOwnProfile() {
   const [editedBio, setEditedBio] = useState("");
   const [editedHourlyRate, setEditedHourlyRate] = useState("");
   const [editedTrainingLocation, setEditedTrainingLocation] = useState("");
+  const [editedProfileImage, setEditedProfileImage] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('availability');
   const { toast } = useToast();
@@ -118,7 +121,7 @@ export default function CoachOwnProfile() {
   }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number; latitude?: number; longitude?: number; trainingLocation?: string }) => {
+    mutationFn: async (updates: { name: string; location: string; sport: string; bio?: string; hourlyRate?: number; latitude?: number; longitude?: number; trainingLocation?: string; profileImage?: string }) => {
       const res = await apiRequest("PATCH", `/api/coaches/${coach!.id}`, updates);
       return await res.json();
     },
@@ -288,6 +291,34 @@ export default function CoachOwnProfile() {
     logout();
   };
 
+  const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (JPEG, PNG, WebP, or GIF).", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload an image under 5MB.", variant: "destructive" });
+      return;
+    }
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/upload/photo", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setEditedProfileImage(data.url);
+      toast({ title: "Photo uploaded", description: "Click Save Changes to apply it to your profile." });
+    } catch {
+      toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  }, [toast]);
+
   const handleSave = () => {
     if (!editedName.trim() || !editedLocation.trim() || !editedSport) {
       toast({
@@ -305,6 +336,7 @@ export default function CoachOwnProfile() {
       bio: editedBio.trim() || undefined,
       hourlyRate: editedHourlyRate ? parseInt(editedHourlyRate) : undefined,
       trainingLocation: editedTrainingLocation.trim() || undefined,
+      ...(editedProfileImage ? { profileImage: editedProfileImage } : {}),
       ...(editedCoords ? { latitude: editedCoords.lat, longitude: editedCoords.lng } : {}),
     });
   };
@@ -801,19 +833,52 @@ export default function CoachOwnProfile() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 pb-6 border-b">
-                  <Avatar className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
-                    <AvatarImage
-                      src={coach.profileImage || coachImage}
-                      alt={coach.name}
-                      className="object-cover"
+                  <div className="relative flex-shrink-0 group">
+                    <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
+                      <AvatarImage
+                        src={editedProfileImage || coach.profileImage || coachImage}
+                        alt={coach.name}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
+                        {coach.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={isUploadingPhoto}
+                      className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      data-testid="button-change-photo"
+                      aria-label="Change profile photo"
+                    >
+                      {isUploadingPhoto ? (
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      ) : (
+                        <Camera className="w-6 h-6 text-white" />
+                      )}
+                    </button>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                      data-testid="input-photo-file"
                     />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
-                      {coach.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
+                  </div>
                   <div className="text-center sm:text-left">
                     <h2 className="text-xl font-semibold">{coach.name}</h2>
                     <p className="text-sm text-muted-foreground">{coach.email}</p>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={isUploadingPhoto}
+                      className="mt-2 text-xs text-primary hover:underline disabled:opacity-50"
+                      data-testid="link-change-photo"
+                    >
+                      {isUploadingPhoto ? "Uploading..." : editedProfileImage ? "Change photo again" : "Change profile photo"}
+                    </button>
                   </div>
                 </div>
 
@@ -933,6 +998,7 @@ export default function CoachOwnProfile() {
                       setEditedBio(coach.bio || "");
                       setEditedHourlyRate(coach.hourlyRate?.toString() || "");
                       setEditedTrainingLocation(coach.trainingLocation || "");
+                      setEditedProfileImage(null);
                     }}
                     data-testid="button-cancel-edit"
                   >
