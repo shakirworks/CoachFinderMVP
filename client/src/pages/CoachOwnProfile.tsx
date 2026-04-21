@@ -833,7 +833,7 @@ export default function CoachOwnProfile() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 pb-6 border-b">
-                  <div className="relative flex-shrink-0 group">
+                  <div className="relative flex-shrink-0">
                     <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
                       <AvatarImage
                         src={editedProfileImage || coach.profileImage || coachImage}
@@ -848,14 +848,14 @@ export default function CoachOwnProfile() {
                       type="button"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={isUploadingPhoto}
-                      className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-md border-2 border-background cursor-pointer"
                       data-testid="button-change-photo"
                       aria-label="Change profile photo"
                     >
                       {isUploadingPhoto ? (
-                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
                       ) : (
-                        <Camera className="w-6 h-6 text-white" />
+                        <Camera className="w-4 h-4 text-primary-foreground" />
                       )}
                     </button>
                     <input
