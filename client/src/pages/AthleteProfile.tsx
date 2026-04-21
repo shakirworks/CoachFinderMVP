@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -31,7 +31,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageNotificationListener from "@/components/MessageNotificationListener";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2, Calendar, Clock, Download, CreditCard, Loader2 } from "lucide-react";
+import { MapPin, Mail, ArrowLeft, LogOut, Edit, MessageCircle, Trash2, Calendar, Clock, Download, CreditCard, Loader2, Camera } from "lucide-react";
 import type { Athlete, Coach, Message, Invoice } from "@shared/schema";
 import LocationInput from "@/components/LocationInput";
 import type { Coords } from "@/lib/geocoding";
@@ -47,6 +47,9 @@ export default function AthleteProfile() {
   const [editedLocation, setEditedLocation] = useState("");
   const [editedCoords, setEditedCoords] = useState<Coords | null>(null);
   const [editedSport, setEditedSport] = useState("");
+  const [editedProfileImage, setEditedProfileImage] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [location, setLocation] = useLocation();
@@ -105,7 +108,7 @@ export default function AthleteProfile() {
   }, [authLoading, authenticated, authUser, authRole, setLocation]);
 
   const updateMutation = useMutation({
-    mutationFn: async (updates: { name: string; location: string; sport: string; latitude?: number; longitude?: number }) => {
+    mutationFn: async (updates: { name: string; location: string; sport: string; latitude?: number; longitude?: number; profileImage?: string }) => {
       const res = await apiRequest("PATCH", `/api/athletes/${athlete!.id}`, updates);
       return await res.json();
     },
@@ -151,6 +154,34 @@ export default function AthleteProfile() {
     logout();
   };
 
+  const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please upload an image file (JPEG, PNG, WebP, or GIF).", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload an image under 5MB.", variant: "destructive" });
+      return;
+    }
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/upload/photo", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setEditedProfileImage(data.url);
+      toast({ title: "Photo uploaded", description: "Click Save Changes to apply it to your profile." });
+    } catch {
+      toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  }, [toast]);
+
   const handleSave = () => {
     if (!editedName.trim() || !editedLocation.trim() || !editedSport) {
       toast({
@@ -165,6 +196,7 @@ export default function AthleteProfile() {
       name: editedName,
       location: editedLocation,
       sport: editedSport,
+      ...(editedProfileImage ? { profileImage: editedProfileImage } : {}),
       ...(editedCoords ? { latitude: editedCoords.lat, longitude: editedCoords.lng } : {}),
     });
   };
@@ -175,6 +207,7 @@ export default function AthleteProfile() {
       setEditedLocation(athlete.location);
       setEditedSport(athlete.sport);
     }
+    setEditedProfileImage(null);
     setIsEditing(false);
   };
 
@@ -241,18 +274,57 @@ export default function AthleteProfile() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-              <Avatar className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
-                <AvatarImage
-                  src={athlete.profileImage || athleteImage}
-                  alt={athlete.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
-                  {athlete.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
+              <div className={`relative flex-shrink-0 ${isEditing ? "group" : ""}`}>
+                <Avatar className="w-20 h-20 sm:w-24 sm:h-24">
+                  <AvatarImage
+                    src={editedProfileImage || athlete.profileImage || athleteImage}
+                    alt={athlete.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl sm:text-2xl">
+                    {athlete.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={isUploadingPhoto}
+                      className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      data-testid="button-change-photo"
+                      aria-label="Change profile photo"
+                    >
+                      {isUploadingPhoto ? (
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      ) : (
+                        <Camera className="w-6 h-6 text-white" />
+                      )}
+                    </button>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                      data-testid="input-photo-file"
+                    />
+                  </>
+                )}
+              </div>
 
               <div className="flex-1 w-full space-y-4">
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    className="text-xs text-primary hover:underline disabled:opacity-50 -mt-2 block"
+                    data-testid="link-change-photo"
+                  >
+                    {isUploadingPhoto ? "Uploading..." : editedProfileImage ? "Change photo again" : "Change profile photo"}
+                  </button>
+                )}
                 {isEditing ? (
                   <>
                     <div className="space-y-2">
