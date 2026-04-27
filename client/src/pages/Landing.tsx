@@ -60,8 +60,13 @@ export default function Landing() {
       const res = await apiRequest("POST", "/api/login", { email: loginEmail, password: loginPassword });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setLoginError(null);
+      if (data.bypassed) {
+        setUserLocally(data.user as Athlete, "athlete");
+        toast({ title: "Welcome back!", description: "Signed in without a code — your recent verification was still valid." });
+        return;
+      }
       setLoginStep("verification");
       toast({
         title: "Code sent",
@@ -85,8 +90,14 @@ export default function Landing() {
       const res = await apiRequest("POST", "/api/login/coach", { email: loginEmail, password: loginPassword });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setLoginError(null);
+      if (data.bypassed) {
+        setUserLocally(data.user as Coach, "coach");
+        toast({ title: "Welcome back!", description: "Signed in without a code — your recent verification was still valid." });
+        setLocation("/coach-profile");
+        return;
+      }
       setLoginStep("verification");
       toast({
         title: "Code sent",

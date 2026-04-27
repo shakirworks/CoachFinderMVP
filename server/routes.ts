@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { insertAthleteSchema, insertCoachSchema, insertMessageSchema, insertAvailabilitySlotSchema, bookingQuoteRequestSchema, bookingCheckoutRequestSchema } from "@shared/schema";
 import { getUncachableStripeClient, getStripePublishableKey, getV2Headers } from "./stripeClient";
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac } from "crypto";
 import { sendVerificationCode, sendWelcomeVerification, sendPasswordResetEmail } from "./email";
 import multer from "multer";
 import path from "path";
@@ -21,6 +21,60 @@ declare module "express-session" {
 
 const SERVICE_FEE_PERCENTAGE = 0.07;
 const HST_PERCENTAGE = 0.13;
+const TWO_FA_BYPASS_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
+const TWO_FA_COOKIE_NAME = "cf_2fa";
+
+function get2faSecret(): string {
+  return process.env.SESSION_SECRET || "coachfinders-dev-fallback-secret-change-me";
+}
+
+function sign2faPayload(payload: string): string {
+  return createHmac("sha256", get2faSecret()).update(payload).digest("hex");
+}
+
+function set2faBypassCookie(res: any, email: string, role: string): void {
+  const timestamp = Date.now();
+  const payload = Buffer.from(`${email}|${role}|${timestamp}`).toString("base64url");
+  const sig = sign2faPayload(payload);
+  const cookieValue = `${payload}.${sig}`;
+  const isProduction = process.env.NODE_ENV === "production";
+  res.cookie(TWO_FA_COOKIE_NAME, cookieValue, {
+    maxAge: TWO_FA_BYPASS_WINDOW_MS,
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "lax" as const,
+  });
+}
+
+function check2faBypass(req: any, email: string, role: string): boolean {
+  try {
+    const cookieHeader: string = req.headers.cookie || "";
+    const cookies: Record<string, string> = {};
+    for (const pair of cookieHeader.split(";")) {
+      const idx = pair.indexOf("=");
+      if (idx < 0) continue;
+      const key = pair.slice(0, idx).trim();
+      const val = decodeURIComponent(pair.slice(idx + 1).trim());
+      cookies[key] = val;
+    }
+    const cookieValue = cookies[TWO_FA_COOKIE_NAME];
+    if (!cookieValue) return false;
+    const dotIdx = cookieValue.lastIndexOf(".");
+    if (dotIdx < 0) return false;
+    const payload = cookieValue.slice(0, dotIdx);
+    const sig = cookieValue.slice(dotIdx + 1);
+    if (sign2faPayload(payload) !== sig) return false;
+    const decoded = Buffer.from(payload, "base64url").toString("utf8");
+    const parts = decoded.split("|");
+    if (parts.length !== 3) return false;
+    const [storedEmail, storedRole, timestampStr] = parts;
+    if (storedEmail !== email || storedRole !== role) return false;
+    const elapsed = Date.now() - parseInt(timestampStr, 10);
+    return elapsed >= 0 && elapsed < TWO_FA_BYPASS_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
 
 // Request the transfers capability on a connected account via both V2 and V1 APIs.
 // V2 accounts need the 'stripe_balance.stripe_transfers' recipient capability.
@@ -473,6 +527,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid password" });
       }
 
+      // 2FA bypass: if a valid bypass cookie exists for this email+role, skip the code
+      if (check2faBypass(req, email, "athlete")) {
+        req.session.userId = athlete.id;
+        req.session.userRole = "athlete";
+        req.session.userEmail = email;
+        set2faBypassCookie(res, email, "athlete"); // refresh the 30-min window
+        const { password: _, ...safeAthlete } = athlete;
+        return res.json({ bypassed: true, user: safeAthlete });
+      }
+
       const code = String(Math.floor(10000 + Math.random() * 90000));
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -517,6 +581,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordMatch = await bcrypt.compare(password, coach.password);
       if (!passwordMatch) {
         return res.status(401).json({ error: "Invalid password" });
+      }
+
+      // 2FA bypass: if a valid bypass cookie exists for this email+role, skip the code
+      if (check2faBypass(req, email, "coach")) {
+        req.session.userId = coach.id;
+        req.session.userRole = "coach";
+        req.session.userEmail = email;
+        set2faBypassCookie(res, email, "coach"); // refresh the 30-min window
+        const { password: _, ...safeCoach } = coach;
+        return res.json({ bypassed: true, user: safeCoach });
       }
 
       const code = String(Math.floor(10000 + Math.random() * 90000));
@@ -571,6 +645,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userRole = "athlete";
       req.session.userEmail = email;
 
+      // Set bypass cookie so the next login within 30 min skips 2FA
+      set2faBypassCookie(res, email, "athlete");
+
       const { password: _, ...safeAthlete } = athlete;
       res.json(safeAthlete);
     } catch (error: any) {
@@ -604,6 +681,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = coach.id;
       req.session.userRole = "coach";
       req.session.userEmail = email;
+
+      // Set bypass cookie so the next login within 30 min skips 2FA
+      set2faBypassCookie(res, email, "coach");
 
       const { password: _, ...safeCoach } = coach;
       res.json(safeCoach);
