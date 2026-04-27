@@ -40,7 +40,7 @@ import ChatWindow from "@/components/ChatWindow";
 import MessageNotificationListener from "@/components/MessageNotificationListener";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar, Award, Camera } from "lucide-react";
+import { MapPin, Mail, LogOut, MessageCircle, DollarSign, Edit, User, ChevronDown, Trash2, CreditCard, CheckCircle, AlertCircle, Loader2, ExternalLink, FileText, Download, Bell, Calendar, Award, Camera, RotateCcw } from "lucide-react";
 import type { Coach, Athlete, Message, Invoice, Notification } from "@shared/schema";
 import LocationInput from "@/components/LocationInput";
 import type { Coords } from "@/lib/geocoding";
@@ -75,6 +75,7 @@ export default function CoachOwnProfile() {
   const { toast } = useToast();
   const [showEmbeddedOnboarding, setShowEmbeddedOnboarding] = useState(false);
   const [stripeConnectInstance, setStripeConnectInstance] = useState<any>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -247,6 +248,32 @@ export default function CoachOwnProfile() {
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/coaches/${coach!.id}/stripe/reset`, {});
+      if (!res.ok) throw new Error("Failed to reset onboarding");
+      return res.json();
+    },
+    onSuccess: () => {
+      setShowResetConfirm(false);
+      setShowEmbeddedOnboarding(false);
+      setStripeConnectInstance(null);
+      setCoach(prev => prev ? {
+        ...prev,
+        stripeAccountId: null,
+        stripeAccountStatus: null,
+        stripeOnboardingComplete: "false",
+      } : prev);
+      toast({
+        title: "Onboarding reset",
+        description: "You can now connect a new Stripe account from the beginning.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Reset failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -526,6 +553,30 @@ export default function CoachOwnProfile() {
                     A 7% platform service fee applies to each booking.
                   </p>
                   
+                  {/* Reset confirmation dialog */}
+                  <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Stripe Onboarding?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will disconnect your current Stripe account from CoachFinders and let you start the setup from the beginning. Athletes will not be able to book you until you complete the new setup.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-reset-cancel">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => resetOnboardingMutation.mutate()}
+                          disabled={resetOnboardingMutation.isPending}
+                          data-testid="button-reset-confirm"
+                          className="bg-destructive text-destructive-foreground"
+                        >
+                          {resetOnboardingMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                          Yes, Reset
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
                   {coach.stripeOnboardingComplete === "true" ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
@@ -579,6 +630,20 @@ export default function CoachOwnProfile() {
                           )}
                         </div>
                       )}
+                      <div className="pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowResetConfirm(true)}
+                          data-testid="button-reset-onboarding"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                          Reset Onboarding
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Start the Stripe setup from scratch if you need to change your account information.
+                        </p>
+                      </div>
                     </div>
                   ) : showEmbeddedOnboarding && stripeConnectInstance ? (
                     <div className="space-y-4">
@@ -622,27 +687,43 @@ export default function CoachOwnProfile() {
                       </div>
                     </div>
                   ) : coach.stripeAccountId ? (
-                    <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="font-medium text-yellow-700 dark:text-yellow-300">Onboarding Incomplete</p>
-                        <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                          Please complete your Stripe account setup to receive payments.
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-medium text-yellow-700 dark:text-yellow-300">Onboarding Incomplete</p>
+                          <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                            Please complete your Stripe account setup to receive payments.
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => initEmbeddedOnboarding(coach.id)}
+                          disabled={stripeOnboardingMutation.isPending}
+                          data-testid="button-continue-onboarding"
+                        >
+                          {stripeOnboardingMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <CreditCard className="h-4 w-4 mr-2" />
+                          )}
+                          Continue Setup
+                        </Button>
+                      </div>
+                      <div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowResetConfirm(true)}
+                          data-testid="button-reset-onboarding-incomplete"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                          Reset and Start Over
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Start fresh if you need to use a different account or correct your information.
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => initEmbeddedOnboarding(coach.id)}
-                        disabled={stripeOnboardingMutation.isPending}
-                        data-testid="button-continue-onboarding"
-                      >
-                        {stripeOnboardingMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <CreditCard className="h-4 w-4 mr-2" />
-                        )}
-                        Continue Setup
-                      </Button>
                     </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/50 rounded-lg">

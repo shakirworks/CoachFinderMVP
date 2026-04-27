@@ -1266,6 +1266,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset Stripe onboarding — clears the Stripe account link so the coach can start fresh
+  app.post("/api/coaches/:coachId/stripe/reset", async (req, res) => {
+    try {
+      const { coachId } = req.params;
+      const coach = await storage.getCoach(coachId);
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+      await storage.updateCoach(coachId, {
+        stripeAccountId: null,
+        stripeAccountStatus: null,
+        stripeOnboardingComplete: "false",
+      } as any);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Stripe reset error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create Stripe Checkout session for booking
   app.post("/api/bookings/checkout", async (req, res) => {
     try {
