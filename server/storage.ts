@@ -150,6 +150,10 @@ export class MemStorage implements IStorage {
         stripeAccountId: null,
         stripeAccountStatus: null,
         stripeOnboardingComplete: null,
+        latitude: null,
+        longitude: null,
+        certificationFileUrl: null,
+        trainingLocation: null,
       };
       this.coaches.set(id, coachData);
     });
@@ -181,6 +185,8 @@ export class MemStorage implements IStorage {
       age: insertAthlete.age ?? null,
       skillLevel: insertAthlete.skillLevel ?? null,
       preferredCoachGender: insertAthlete.preferredCoachGender ?? null,
+      latitude: insertAthlete.latitude ?? null,
+      longitude: insertAthlete.longitude ?? null,
     };
     this.athletes.set(id, athlete);
     return athlete;
@@ -245,6 +251,10 @@ export class MemStorage implements IStorage {
       stripeAccountId: null,
       stripeAccountStatus: null,
       stripeOnboardingComplete: null,
+      latitude: insertCoach.latitude ?? null,
+      longitude: insertCoach.longitude ?? null,
+      certificationFileUrl: insertCoach.certificationFileUrl ?? null,
+      trainingLocation: insertCoach.trainingLocation ?? null,
     };
     this.coaches.set(id, coach);
     return coach;
