@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all coaches (with optional distance filter: ?lat=&lng=&radius=km)
+  // Get all coaches (optional filters: ?lat=&lng=&radius=km&sport=&location=&minRate=&maxRate=&levels=&types=)
   app.get("/api/coaches", async (req, res) => {
     try {
       const coaches = await storage.getAllCoaches();
@@ -499,9 +499,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const sport = req.query.sport as string | undefined;
+      const location = req.query.location as string | undefined;
+      const minRate = req.query.minRate ? parseFloat(req.query.minRate as string) : null;
+      const maxRate = req.query.maxRate ? parseFloat(req.query.maxRate as string) : null;
+      const levels = req.query.levels ? (req.query.levels as string).split(',').filter(Boolean) : null;
+      const types = req.query.types ? (req.query.types as string).split(',').filter(Boolean) : null;
+
+      if (sport) {
+        safeCoaches = safeCoaches.filter((c) => c.sport === sport);
+      }
+      if (location) {
+        const loc = location.toLowerCase();
+        safeCoaches = safeCoaches.filter((c) => c.location.toLowerCase().includes(loc));
+      }
+      if (minRate !== null && !isNaN(minRate)) {
+        safeCoaches = safeCoaches.filter((c) => c.hourly_rate != null && parseFloat(c.hourly_rate) >= minRate);
+      }
+      if (maxRate !== null && !isNaN(maxRate)) {
+        safeCoaches = safeCoaches.filter((c) => c.hourly_rate != null && parseFloat(c.hourly_rate) <= maxRate);
+      }
+      if (levels && levels.length > 0) {
+        safeCoaches = safeCoaches.filter((c) =>
+          Array.isArray(c.student_levels) && levels.some((l) => c.student_levels.includes(l))
+        );
+      }
+      if (types && types.length > 0) {
+        safeCoaches = safeCoaches.filter((c) =>
+          Array.isArray(c.coaching_options) && types.some((t) => c.coaching_options.includes(t))
+        );
+      }
+
       res.json(safeCoaches);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
     }
   });
 
