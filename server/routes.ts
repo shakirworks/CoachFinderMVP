@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const forwardedHost = req.get("x-forwarded-host") || req.get("host");
       const origin = req.get("origin");
       const baseUrl = origin || `${forwardedProto}://${forwardedHost}`;
-      const verificationLink = `${baseUrl}/verify-email?token=${token}`;
+      const verificationLink = `${baseUrl}/mobile-verify?token=${token}`;
 
       try {
         await sendWelcomeVerification(email, verificationLink, role as "athlete" | "coach");
