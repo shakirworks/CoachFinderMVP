@@ -1,6 +1,8 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 
@@ -18,7 +20,7 @@ export default function BookingSuccess() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconWrap}>
-          <Text style={styles.checkmark}>✓</Text>
+          <Ionicons name="checkmark" size={52} color={Colors.success} />
         </View>
         <Text style={styles.title}>Booking Confirmed!</Text>
 
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
     width: 100, height: 100, borderRadius: 50,
     backgroundColor: Colors.success + '15', alignItems: 'center', justifyContent: 'center',
   },
-  checkmark: { fontSize: 48, color: Colors.success },
   title: { fontSize: 28, fontWeight: '800', color: Colors.text, textAlign: 'center' },
   summaryCard: {
     width: '100%', backgroundColor: Colors.surface, borderRadius: 16,

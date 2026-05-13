@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 
@@ -32,7 +33,9 @@ export default function RoleSelect() {
 
         <View style={styles.cards}>
           <TouchableOpacity style={styles.card} onPress={() => handleRole('athlete')} activeOpacity={0.8}>
-            <Text style={styles.cardEmoji}>🏃‍♂️</Text>
+            <View style={styles.cardIconContainer}>
+              <Ionicons name="body-outline" size={32} color={Colors.primaryForeground} />
+            </View>
             <Text style={styles.cardTitle}>Athlete</Text>
             <Text style={styles.cardDesc}>
               {isSignIn ? 'Sign in to your athlete account' : 'Find and book coaching sessions'}
@@ -40,7 +43,9 @@ export default function RoleSelect() {
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.card, styles.cardCoach]} onPress={() => handleRole('coach')} activeOpacity={0.8}>
-            <Text style={styles.cardEmoji}>🏆</Text>
+            <View style={[styles.cardIconContainer, styles.cardIconCoach]}>
+              <Ionicons name="trophy-outline" size={32} color={Colors.primary} />
+            </View>
             <Text style={[styles.cardTitle, styles.cardTitleCoach]}>Coach</Text>
             <Text style={[styles.cardDesc, styles.cardDescCoach]}>
               {isSignIn ? 'Sign in to your coach account' : 'Manage your coaching business'}
@@ -71,6 +76,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     color: Colors.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
@@ -85,32 +91,39 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 20,
     padding: 28,
-    gap: 8,
+    gap: 10,
   },
   cardCoach: {
     backgroundColor: Colors.surface,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.border,
   },
-  cardEmoji: {
-    fontSize: 36,
+  cardIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  cardIconCoach: {
+    backgroundColor: Colors.primaryLight + '18',
   },
   cardTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.primaryForeground,
   },
   cardTitleCoach: {
     color: Colors.text,
   },
   cardDesc: {
     fontSize: 14,
-    color: '#FFFFFF',
-    opacity: 0.85,
+    color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
   },
   cardDescCoach: {
     color: Colors.textSecondary,
-    opacity: 1,
   },
 });

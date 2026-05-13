@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -55,7 +56,9 @@ export default function ResetPassword() {
           <View style={styles.content}>
             {done ? (
               <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>✓</Text>
+                <View style={styles.successIconWrap}>
+                  <Ionicons name="checkmark" size={40} color={Colors.success} />
+                </View>
                 <Text style={styles.title}>Password Reset!</Text>
                 <Text style={styles.successMsg}>
                   Your password has been updated successfully. You can now sign in with your new password.
@@ -133,9 +136,9 @@ const styles = StyleSheet.create({
   errorBox: { backgroundColor: Colors.error + '15', borderRadius: 8, padding: 12 },
   errorText: { fontSize: 14, color: Colors.error },
   successContainer: { flex: 1, alignItems: 'center', paddingTop: 40, gap: 16 },
-  successIcon: {
-    fontSize: 40, width: 80, height: 80, textAlign: 'center', lineHeight: 80,
-    backgroundColor: Colors.success + '15', borderRadius: 40,
+  successIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.success + '15', alignItems: 'center', justifyContent: 'center',
   },
   successMsg: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });

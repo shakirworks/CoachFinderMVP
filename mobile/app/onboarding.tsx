@@ -1,28 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Animated, Dimensions, StatusBar,
+  Animated, StatusBar, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '@/theme/colors';
 
-const { width } = Dimensions.get('window');
+type SportIconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const SPORTS = [
-  { id: 'soccer',    label: 'Soccer',            icon: '⚽' },
-  { id: 'basketball',label: 'Basketball',         icon: '🏀' },
-  { id: 'tennis',    label: 'Tennis',             icon: '🎾' },
-  { id: 'golf',      label: 'Golf',               icon: '⛳' },
-  { id: 'pickleball',label: 'Pickleball',         icon: '🏓' },
-  { id: 'skiing',    label: 'Skiing',             icon: '⛷' },
-  { id: 'baseball',  label: 'Baseball',           icon: '⚾' },
-  { id: 'running',   label: 'Running',            icon: '🏃' },
-  { id: 'swimming',  label: 'Swimming',           icon: '🏊' },
-  { id: 'cycling',   label: 'Cycling',            icon: '🚴' },
-  { id: 'yoga',      label: 'Yoga',               icon: '🧘' },
-  { id: 'training',  label: 'Personal Training',  icon: '💪' },
+const SPORTS: { id: string; label: string; icon: SportIconName }[] = [
+  { id: 'soccer',      label: 'Soccer',           icon: 'football-outline' },
+  { id: 'basketball',  label: 'Basketball',        icon: 'basketball-outline' },
+  { id: 'tennis',      label: 'Tennis',            icon: 'tennisball-outline' },
+  { id: 'golf',        label: 'Golf',              icon: 'golf-outline' as SportIconName },
+  { id: 'pickleball',  label: 'Pickleball',        icon: 'tennisball-outline' },
+  { id: 'skiing',      label: 'Skiing',            icon: 'snow-outline' },
+  { id: 'baseball',    label: 'Baseball',          icon: 'baseball-outline' },
+  { id: 'running',     label: 'Running',           icon: 'walk-outline' },
+  { id: 'swimming',    label: 'Swimming',          icon: 'water-outline' },
+  { id: 'cycling',     label: 'Cycling',           icon: 'bicycle-outline' },
+  { id: 'yoga',        label: 'Yoga',              icon: 'body-outline' },
+  { id: 'training',    label: 'Personal Training', icon: 'barbell-outline' },
 ];
 
 const LOADING_MESSAGES = [
@@ -104,7 +105,11 @@ export default function OnboardingScreen() {
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" />
         <Animated.View style={[styles.loadingLogo, { transform: [{ scale: pulseAnim }] }]}>
-          <Text style={styles.loadingLogoText}>CoachFinders</Text>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.loadingLogoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
         <Text style={styles.loadingMsg}>{LOADING_MESSAGES[loadingMsgIdx]}</Text>
         <View style={styles.progressTrack}>
@@ -122,7 +127,11 @@ export default function OnboardingScreen() {
           styles.heroSection,
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
         ]}>
-          <Text style={styles.wordmark}>CoachFinders</Text>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.headline}>Find your perfect{'\n'}coach today</Text>
         </Animated.View>
 
@@ -143,7 +152,11 @@ export default function OnboardingScreen() {
                   onPress={() => toggleSport(sport.id)}
                   activeOpacity={0.75}
                 >
-                  <Text style={styles.sportIcon}>{sport.icon}</Text>
+                  <Ionicons
+                    name={sport.icon}
+                    size={15}
+                    color={isSelected ? '#FFFFFF' : Colors.textSecondary}
+                  />
                   <Text style={[styles.sportLabel, isSelected && styles.sportLabelSelected]}>
                     {sport.label}
                   </Text>
@@ -182,22 +195,20 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     paddingHorizontal: 28,
-    paddingTop: 32,
-    paddingBottom: 28,
-    gap: 12,
+    paddingTop: 28,
+    paddingBottom: 24,
+    gap: 14,
   },
-  wordmark: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+  logoImage: {
+    width: 160,
+    height: 44,
+    tintColor: 'rgba(255,255,255,0.9)',
   },
   headline: {
-    fontSize: 38,
+    fontSize: 36,
     fontWeight: '800',
     color: '#FFFFFF',
-    lineHeight: 46,
+    lineHeight: 44,
     letterSpacing: -0.5,
   },
   card: {
@@ -241,9 +252,6 @@ const styles = StyleSheet.create({
   sportChipSelected: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
-  },
-  sportIcon: {
-    fontSize: 16,
   },
   sportLabel: {
     fontSize: 14,
@@ -289,11 +297,10 @@ const styles = StyleSheet.create({
   loadingLogo: {
     alignItems: 'center',
   },
-  loadingLogoText: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
+  loadingLogoImage: {
+    width: 200,
+    height: 56,
+    tintColor: '#FFFFFF',
   },
   loadingMsg: {
     fontSize: 15,

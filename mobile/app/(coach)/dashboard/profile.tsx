@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -151,7 +152,10 @@ export default function CoachProfileTab() {
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>{coach.name}</Text>
                 <Text style={styles.profileEmail}>{coach.email}</Text>
-                <Text style={styles.profileLocation}>📍 {coach.location}</Text>
+                <View style={styles.profileLocationRow}>
+                  <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
+                  <Text style={styles.profileLocation}>{coach.location}</Text>
+                </View>
                 {coach.bio && <Text style={styles.profileBio} numberOfLines={3}>{coach.bio}</Text>}
                 <View style={styles.badgeRow}>
                   {coach.sport && <Badge label={coach.sport} variant="primary" />}
@@ -248,6 +252,7 @@ const styles = StyleSheet.create({
   profileInfo: { alignItems: 'center', gap: 6, width: '100%' },
   profileName: { fontSize: 22, fontWeight: '700', color: Colors.text },
   profileEmail: { fontSize: 14, color: Colors.textSecondary },
+  profileLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   profileLocation: { fontSize: 14, color: Colors.textSecondary },
   profileBio: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },

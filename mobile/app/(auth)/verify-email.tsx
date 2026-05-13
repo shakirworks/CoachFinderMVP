@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 import { api } from '@/lib/api';
@@ -45,7 +46,9 @@ export default function VerifyEmail() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <Text style={styles.errorIcon}>❌</Text>
+          <View style={styles.errorIconWrap}>
+            <Ionicons name="close-circle-outline" size={48} color={Colors.error} />
+          </View>
           <Text style={styles.errorTitle}>Verification Failed</Text>
           <Text style={styles.errorDesc}>{errorMsg}</Text>
           <Button title="Go to Sign In" onPress={() => router.replace('/')} style={styles.btn} />
@@ -57,7 +60,9 @@ export default function VerifyEmail() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.center}>
-        <Text style={styles.successIcon}>✓</Text>
+        <View style={styles.successIconWrap}>
+          <Ionicons name="checkmark" size={48} color={Colors.success} />
+        </View>
         <Text style={styles.successTitle}>Email Verified!</Text>
         <Text style={styles.successDesc}>
           Your email has been verified. Now let's set up your profile.
@@ -83,10 +88,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16 },
   loadingText: { fontSize: 16, color: Colors.textSecondary, marginTop: 16 },
-  errorIcon: { fontSize: 48 },
+  errorIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.error + '15', alignItems: 'center', justifyContent: 'center',
+  },
   errorTitle: { fontSize: 24, fontWeight: '700', color: Colors.error },
   errorDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  successIcon: { fontSize: 48, width: 80, height: 80, textAlign: 'center', lineHeight: 80, backgroundColor: Colors.success + '15', borderRadius: 40 },
+  successIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.success + '15', alignItems: 'center', justifyContent: 'center',
+  },
   successTitle: { fontSize: 24, fontWeight: '700', color: Colors.success },
   successDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   btn: { width: '100%', marginTop: 8 },

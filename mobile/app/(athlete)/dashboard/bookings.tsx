@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/theme/colors';
@@ -56,7 +57,10 @@ export default function BookingsTab() {
               <View style={styles.sessions}>
                 {sessions.slice(0, 3).map((s, i) => (
                   <View key={i} style={styles.sessionRow}>
-                    <Text style={styles.sessionDate}>📅 {s.date}</Text>
+                    <View style={styles.sessionDateRow}>
+                      <Ionicons name="calendar-outline" size={13} color={Colors.textSecondary} />
+                      <Text style={styles.sessionDate}>{s.date}</Text>
+                    </View>
                     <Text style={styles.sessionTime}>{s.startTime} – {s.endTime}</Text>
                   </View>
                 ))}
@@ -90,7 +94,7 @@ export default function BookingsTab() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📅</Text>
+            <Ionicons name="calendar-outline" size={48} color={Colors.border} />
             <Text style={styles.emptyTitle}>No bookings yet</Text>
             <Text style={styles.emptyDesc}>Book a session with a coach to get started</Text>
             <Button
@@ -124,7 +128,8 @@ const styles = StyleSheet.create({
   statusTextPaid: { color: Colors.success },
   statusTextPending: { color: Colors.warning },
   sessions: { gap: 6, borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: 10 },
-  sessionRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  sessionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sessionDateRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   sessionDate: { fontSize: 13, color: Colors.text },
   sessionTime: { fontSize: 13, color: Colors.textSecondary },
   moreSessions: { fontSize: 12, color: Colors.textTertiary, fontStyle: 'italic' },
@@ -137,7 +142,6 @@ const styles = StyleSheet.create({
   footerActions: { alignItems: 'flex-end', gap: 6 },
   paidDate: { fontSize: 12, color: Colors.textTertiary },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12, paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
   emptyDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   emptyBtn: { marginTop: 8, width: '100%' },

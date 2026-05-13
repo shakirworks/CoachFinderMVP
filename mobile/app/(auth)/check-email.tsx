@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 
@@ -12,7 +13,7 @@ export default function CheckEmail() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>✉️</Text>
+          <Ionicons name="mail-outline" size={36} color={Colors.primary} />
         </View>
 
         <Text style={styles.title}>Check Your Email</Text>
@@ -66,7 +67,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  icon: { fontSize: 36 },
   title: {
     fontSize: 28,
     fontWeight: '800',

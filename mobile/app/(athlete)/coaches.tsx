@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Colors } from '@/theme/colors';
 import CoachCard from '@/components/CoachCard';
@@ -118,7 +119,7 @@ export default function CoachesScreen() {
 
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons name="search-outline" size={16} color={Colors.textTertiary} style={styles.searchIconEl} />
             <TextInput
               style={styles.searchInput}
               value={search}
@@ -127,8 +128,8 @@ export default function CoachesScreen() {
               placeholderTextColor={Colors.textTertiary}
             />
             {search ? (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Text style={styles.clearSearch}>✕</Text>
+              <TouchableOpacity onPress={() => setSearch('')} style={styles.clearSearchBtn}>
+                <Ionicons name="close-circle" size={16} color={Colors.textTertiary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -136,7 +137,11 @@ export default function CoachesScreen() {
             style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
             onPress={() => setFilterVisible(true)}
           >
-            <Text style={styles.filterIcon}>⚙</Text>
+            <Ionicons
+              name="options-outline"
+              size={20}
+              color={activeFilterCount > 0 ? '#fff' : Colors.textSecondary}
+            />
             {activeFilterCount > 0 ? (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -184,7 +189,7 @@ export default function CoachesScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔍</Text>
+            <Ionicons name="search-outline" size={48} color={Colors.border} />
             <Text style={styles.emptyTitle}>No coaches found</Text>
             <Text style={styles.emptyDesc}>Try adjusting your search or filters</Text>
             {activeFilterCount > 0 && (
@@ -280,15 +285,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border,
     borderRadius: 10, paddingHorizontal: 12,
   },
-  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchIconEl: { marginRight: 6 },
   searchInput: { flex: 1, paddingVertical: 11, fontSize: 15, color: Colors.text },
-  clearSearch: { fontSize: 14, color: Colors.textTertiary, padding: 4 },
+  clearSearchBtn: { padding: 6 },
   filterBtn: {
     width: 46, height: 46, borderRadius: 10, backgroundColor: Colors.surface,
     borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center',
   },
   filterBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterIcon: { fontSize: 18 },
   filterBadge: {
     position: 'absolute', top: -4, right: -4, width: 18, height: 18,
     borderRadius: 9, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
@@ -306,7 +310,6 @@ const styles = StyleSheet.create({
   resultCount: { fontSize: 13, color: Colors.textTertiary },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
   emptyState: { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text },
   emptyDesc: { fontSize: 14, color: Colors.textSecondary },
   clearBtn: { marginTop: 8 },

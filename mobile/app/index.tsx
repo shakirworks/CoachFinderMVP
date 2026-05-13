@@ -1,15 +1,35 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions,
+  View, Text, StyleSheet, TouchableOpacity, StatusBar, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { Colors } from '@/theme/colors';
 import LoadingScreen from '@/components/LoadingScreen';
 
-const { height } = Dimensions.get('window');
+const SPORT_LABELS: Record<string, string> = {
+  soccer: 'Soccer', basketball: 'Basketball', tennis: 'Tennis', golf: 'Golf',
+  pickleball: 'Pickleball', skiing: 'Skiing', baseball: 'Baseball', running: 'Running',
+  swimming: 'Swimming', cycling: 'Cycling', yoga: 'Yoga', training: 'Personal Training',
+};
+
+const SPORT_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  soccer: 'football-outline',
+  basketball: 'basketball-outline',
+  tennis: 'tennisball-outline',
+  golf: 'golf-outline' as keyof typeof Ionicons.glyphMap,
+  pickleball: 'tennisball-outline',
+  skiing: 'snow-outline',
+  baseball: 'baseball-outline',
+  running: 'walk-outline',
+  swimming: 'water-outline',
+  cycling: 'bicycle-outline',
+  yoga: 'body-outline',
+  training: 'barbell-outline',
+};
 
 export default function Index() {
   const { authenticated, role, loading } = useAuth();
@@ -44,24 +64,17 @@ export default function Index() {
 
   if (authenticated) return <LoadingScreen />;
 
-  const sportIcons: Record<string, string> = {
-    soccer: '⚽', basketball: '🏀', tennis: '🎾', golf: '⛳',
-    pickleball: '🏓', skiing: '⛷', baseball: '⚾', running: '🏃',
-    swimming: '🏊', cycling: '🚴', yoga: '🧘', training: '💪',
-  };
-  const sportLabels: Record<string, string> = {
-    soccer: 'Soccer', basketball: 'Basketball', tennis: 'Tennis', golf: 'Golf',
-    pickleball: 'Pickleball', skiing: 'Skiing', baseball: 'Baseball', running: 'Running',
-    swimming: 'Swimming', cycling: 'Cycling', yoga: 'Yoga', training: 'Personal Training',
-  };
-
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
 
       <View style={styles.hero}>
         <SafeAreaView style={styles.heroSafe}>
-          <Text style={styles.wordmark}>CoachFinders</Text>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <View style={styles.heroContent}>
             <Text style={styles.headline}>Your coaching{'\n'}journey starts{'\n'}here.</Text>
             <Text style={styles.tagline}>
@@ -69,15 +82,19 @@ export default function Index() {
             </Text>
             {selectedSports.length > 0 && (
               <View style={styles.sportPills}>
-                {selectedSports.slice(0, 5).map(id => (
+                {selectedSports.slice(0, 4).map(id => (
                   <View key={id} style={styles.pill}>
-                    <Text style={styles.pillIcon}>{sportIcons[id]}</Text>
-                    <Text style={styles.pillText}>{sportLabels[id]}</Text>
+                    <Ionicons
+                      name={SPORT_ICONS[id] || 'fitness-outline'}
+                      size={13}
+                      color="rgba(255,255,255,0.9)"
+                    />
+                    <Text style={styles.pillText}>{SPORT_LABELS[id] || id}</Text>
                   </View>
                 ))}
-                {selectedSports.length > 5 && (
+                {selectedSports.length > 4 && (
                   <View style={styles.pill}>
-                    <Text style={styles.pillText}>+{selectedSports.length - 5} more</Text>
+                    <Text style={styles.pillText}>+{selectedSports.length - 4} more</Text>
                   </View>
                 )}
               </View>
@@ -98,12 +115,15 @@ export default function Index() {
             activeOpacity={0.85}
           >
             <View style={styles.roleCardInner}>
-              <View>
-                <Text style={styles.roleCardTitle}>I'm an Athlete</Text>
-                <Text style={styles.roleCardDesc}>Discover and book coaching sessions</Text>
+              <View style={styles.roleCardLeft}>
+                <Ionicons name="body-outline" size={20} color={Colors.primaryForeground} />
+                <View>
+                  <Text style={styles.roleCardTitle}>I'm an Athlete</Text>
+                  <Text style={styles.roleCardDesc}>Discover and book coaching sessions</Text>
+                </View>
               </View>
               <View style={styles.roleArrow}>
-                <Text style={styles.roleArrowText}>→</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.primaryForeground} />
               </View>
             </View>
           </TouchableOpacity>
@@ -114,12 +134,15 @@ export default function Index() {
             activeOpacity={0.85}
           >
             <View style={styles.roleCardInner}>
-              <View>
-                <Text style={[styles.roleCardTitle, styles.roleCardTitleDark]}>I'm a Coach</Text>
-                <Text style={styles.roleCardDescDark}>Grow your coaching business</Text>
+              <View style={styles.roleCardLeft}>
+                <Ionicons name="trophy-outline" size={20} color={Colors.primary} />
+                <View>
+                  <Text style={[styles.roleCardTitle, styles.roleCardTitleDark]}>I'm a Coach</Text>
+                  <Text style={styles.roleCardDescDark}>Grow your coaching business</Text>
+                </View>
               </View>
               <View style={[styles.roleArrow, styles.roleArrowOutline]}>
-                <Text style={[styles.roleArrowText, styles.roleArrowTextDark]}>→</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
               </View>
             </View>
           </TouchableOpacity>
@@ -151,30 +174,28 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 28,
   },
-  wordmark: {
-    marginTop: 20,
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
+  logoImage: {
+    width: 160,
+    height: 44,
+    marginTop: 16,
+    tintColor: 'rgba(255,255,255,0.9)',
   },
   heroContent: {
     flex: 1,
     justifyContent: 'center',
-    gap: 20,
-    paddingBottom: 20,
+    gap: 16,
+    paddingBottom: 24,
   },
   headline: {
-    fontSize: 42,
+    fontSize: 38,
     fontWeight: '800',
     color: '#FFFFFF',
-    lineHeight: 50,
+    lineHeight: 46,
     letterSpacing: -1,
   },
   tagline: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.72)',
     lineHeight: 22,
   },
   sportPills: {
@@ -185,14 +206,11 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 50,
     paddingHorizontal: 12,
     paddingVertical: 6,
-  },
-  pillIcon: {
-    fontSize: 13,
   },
   pillText: {
     fontSize: 12,
@@ -206,7 +224,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    gap: 16,
+    gap: 14,
   },
   sheetHandle: {
     width: 36,
@@ -214,25 +232,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     borderRadius: 2,
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   sheetTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     color: Colors.text,
+    letterSpacing: -0.3,
   },
   sheetSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginTop: -8,
+    marginTop: -6,
   },
   roleCards: {
     gap: 12,
   },
   roleCard: {
     backgroundColor: Colors.primary,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 14,
+    padding: 18,
   },
   roleCardOutline: {
     backgroundColor: Colors.surface,
@@ -244,11 +263,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  roleCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
   roleCardTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    color: Colors.primaryForeground,
+    marginBottom: 2,
   },
   roleCardTitleDark: {
     color: Colors.text,
@@ -262,23 +287,15 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   roleArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   roleArrowOutline: {
     backgroundColor: Colors.surfaceSecondary,
-  },
-  roleArrowText: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  roleArrowTextDark: {
-    color: Colors.text,
   },
   signinRow: {
     flexDirection: 'row',

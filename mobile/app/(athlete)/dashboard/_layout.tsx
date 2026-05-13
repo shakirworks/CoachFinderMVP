@@ -1,16 +1,13 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Colors } from '@/theme/colors';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Athlete, MessageThread } from '@/lib/types';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.6 }}>{emoji}</Text>;
-}
-
-function MessagesTabIcon({ focused }: { focused: boolean }) {
+function MessagesTabIcon({ focused, color }: { focused: boolean; color: string }) {
   const { user, role } = useAuth();
   const athlete = role === 'athlete' ? (user as Athlete) : null;
 
@@ -26,7 +23,7 @@ function MessagesTabIcon({ focused }: { focused: boolean }) {
 
   return (
     <View style={iconStyles.wrapper}>
-      <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.6 }}>💬</Text>
+      <Ionicons name={focused ? 'chatbubble' : 'chatbubble-outline'} size={24} color={color} />
       {unreadTotal > 0 && (
         <View style={iconStyles.badge}>
           <Text style={iconStyles.badgeText}>{unreadTotal > 99 ? '99+' : unreadTotal}</Text>
@@ -39,9 +36,9 @@ function MessagesTabIcon({ focused }: { focused: boolean }) {
 const iconStyles = StyleSheet.create({
   wrapper: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
   badge: {
-    position: 'absolute', top: -4, right: -8,
+    position: 'absolute', top: -4, right: -10,
     minWidth: 18, height: 18, borderRadius: 9,
-    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.error, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 4,
   },
   badgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
@@ -72,21 +69,25 @@ export default function AthleteDashboardLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: 'Bookings',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ focused }) => <MessagesTabIcon focused={focused} />,
+          tabBarIcon: ({ focused, color }) => <MessagesTabIcon focused={focused} color={color} />,
         }}
       />
     </Tabs>

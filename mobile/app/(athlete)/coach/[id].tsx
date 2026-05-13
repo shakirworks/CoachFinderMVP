@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
@@ -176,7 +177,7 @@ export default function CoachProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topNav}>
-        <Button title="← Back" variant="ghost" size="sm" onPress={() => router.back()} />
+        <Button title="Back" variant="ghost" size="sm" onPress={() => router.back()} />
         {athlete && (
           <Button title="Chat" variant="outline" size="sm" onPress={() => setChatVisible(true)} />
         )}
@@ -192,7 +193,8 @@ export default function CoachProfileScreen() {
             {coach.yearsOfExperience && <Badge label={`${coach.yearsOfExperience} yrs`} variant="outline" />}
           </View>
           <View style={styles.locationRow}>
-            <Text style={styles.locationText}>📍 {coach.location}</Text>
+            <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.locationText}>{coach.location}</Text>
           </View>
         </View>
 
@@ -230,14 +232,14 @@ export default function CoachProfileScreen() {
           <Text style={styles.sectionTitle}>{athlete ? 'Book a Session' : 'Availability'}</Text>
 
           <View style={styles.calendarHeader}>
-            <TouchableOpacity onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}>
-              <Text style={styles.calNavBtn}>‹</Text>
+            <TouchableOpacity style={styles.calNavBtn} onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}>
+              <Ionicons name="chevron-back" size={20} color={Colors.text} />
             </TouchableOpacity>
             <Text style={styles.calMonthTitle}>
               {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
             </Text>
-            <TouchableOpacity onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}>
-              <Text style={styles.calNavBtn}>›</Text>
+            <TouchableOpacity style={styles.calNavBtn} onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}>
+              <Ionicons name="chevron-forward" size={20} color={Colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -292,7 +294,7 @@ export default function CoachProfileScreen() {
                       </View>
                       {athlete && (
                         <View style={[styles.slotCheck, isSelected && styles.slotCheckSelected]}>
-                          {isSelected && <Text style={styles.slotCheckMark}>✓</Text>}
+                          {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
                         </View>
                       )}
                     </TouchableOpacity>
@@ -325,7 +327,7 @@ export default function CoachProfileScreen() {
             </View>
           )}
           <Button
-            title={verifyingPayment ? 'Verifying Payment...' : checkoutMutation.isPending ? 'Opening Checkout...' : 'Book Now →'}
+            title={verifyingPayment ? 'Verifying Payment...' : checkoutMutation.isPending ? 'Opening Checkout...' : 'Book Now'}
             onPress={() => checkoutMutation.mutate()}
             loading={checkoutMutation.isPending || verifyingPayment || quoteFetching}
             style={styles.bookBtn}
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, fontWeight: '600', color: Colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 },
   infoValue: { fontSize: 15, color: Colors.text },
   calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
-  calNavBtn: { fontSize: 28, color: Colors.primary, padding: 8 },
+  calNavBtn: { padding: 8, alignItems: 'center', justifyContent: 'center' },
   calMonthTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   calDayHeader: {
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   slotCheckSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  slotCheckMark: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  slotCheckMark: { color: '#fff' },
   noSlots: { alignItems: 'center', paddingVertical: 20 },
   noSlotsText: { fontSize: 14, color: Colors.textTertiary },
   bottomPad: { height: 40 },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors } from '@/theme/colors';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -92,7 +93,7 @@ export default function MessagesTab() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>💬</Text>
+            <Ionicons name="chatbubble-outline" size={48} color={Colors.border} />
             <Text style={styles.emptyTitle}>No messages yet</Text>
             <Text style={styles.emptyDesc}>Start a conversation by messaging a coach from their profile</Text>
           </View>
@@ -185,7 +186,6 @@ const styles = StyleSheet.create({
   unreadCount: { fontSize: 11, fontWeight: '700', color: '#fff' },
   separator: { height: 1, backgroundColor: Colors.border, marginLeft: 80 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12, paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
   emptyDesc: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   chatContainer: { flex: 1, backgroundColor: Colors.background },

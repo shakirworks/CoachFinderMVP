@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/theme/colors';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -43,7 +44,9 @@ export default function ForgotPassword() {
           <View style={styles.content}>
             {sent ? (
               <View style={styles.successContainer}>
-                <Text style={styles.successIcon}>📧</Text>
+                <View style={styles.successIconWrap}>
+                  <Ionicons name="mail-outline" size={40} color={Colors.primary} />
+                </View>
                 <Text style={styles.title}>Check Your Email</Text>
                 <Text style={styles.successMsg}>
                   If an account exists for {email}, a password reset link has been sent. Check your inbox and spam folder.
@@ -98,6 +101,9 @@ const styles = StyleSheet.create({
   errorBox: { backgroundColor: Colors.error + '15', borderRadius: 8, padding: 12 },
   errorText: { fontSize: 14, color: Colors.error },
   successContainer: { flex: 1, alignItems: 'center', paddingTop: 40, gap: 16 },
-  successIcon: { fontSize: 48 },
+  successIconWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.primary + '15', alignItems: 'center', justifyContent: 'center',
+  },
   successMsg: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/theme/colors';
@@ -112,14 +113,14 @@ export default function AvailabilityTab() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.calSection}>
           <View style={styles.calNav}>
-            <TouchableOpacity onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}>
-              <Text style={styles.calNavBtn}>‹</Text>
+            <TouchableOpacity style={styles.calNavBtn} onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}>
+              <Ionicons name="chevron-back" size={20} color={Colors.text} />
             </TouchableOpacity>
             <Text style={styles.calMonthTitle}>
               {selectedMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
             </Text>
-            <TouchableOpacity onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}>
-              <Text style={styles.calNavBtn}>›</Text>
+            <TouchableOpacity style={styles.calNavBtn} onPress={() => setSelectedMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}>
+              <Ionicons name="chevron-forward" size={20} color={Colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -187,7 +188,7 @@ export default function AvailabilityTab() {
                         style={styles.deleteSlotBtn}
                         onPress={() => handleDeleteSlot(slot)}
                       >
-                        <Text style={styles.deleteSlotText}>✕</Text>
+                        <Ionicons name="close" size={16} color={Colors.error} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: 40 },
   calSection: { margin: 16, backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 16, gap: 12 },
   calNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  calNavBtn: { fontSize: 28, color: Colors.primary, paddingHorizontal: 8 },
+  calNavBtn: { padding: 8, alignItems: 'center', justifyContent: 'center' },
   calMonthTitle: { fontSize: 17, fontWeight: '600', color: Colors.text },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   calDayHeader: { width: '14.28%', textAlign: 'center', fontSize: 12, fontWeight: '600', color: Colors.textTertiary, paddingBottom: 8 },
@@ -304,7 +305,6 @@ const styles = StyleSheet.create({
   slotTimeContainer: {},
   slotTime: { fontSize: 15, fontWeight: '600', color: Colors.text },
   deleteSlotBtn: { padding: 6 },
-  deleteSlotText: { fontSize: 16, color: Colors.error },
   promptSection: { paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center' },
   promptText: { fontSize: 14, color: Colors.textTertiary, fontStyle: 'italic' },
   upcomingSection: { margin: 16, gap: 10 },
