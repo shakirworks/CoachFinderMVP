@@ -85,7 +85,7 @@ export default function OnboardingScreen() {
     const navTimer  = setTimeout(() => {
       clearTimeout(msgTimer1);
       clearTimeout(msgTimer2);
-      router.replace('/');
+      router.replace('/(auth)/get-started');
     }, 2800);
 
     return () => {
