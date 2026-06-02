@@ -42,6 +42,11 @@
     },
     "deepLinking": {
       "prefixes": ["coachfinders://", "https://coachfinders.replit.app"]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_PROJECT_ID_HERE"
+      }
     }
   }
 }
