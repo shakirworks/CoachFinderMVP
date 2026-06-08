@@ -29,6 +29,7 @@
     },
     "scheme": "coachfinders",
     "plugins": [
+      "expo-dev-client",
       "expo-router",
       "expo-secure-store",
       [
@@ -40,9 +41,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "deepLinking": {
-      "prefixes": ["coachfinders://", "https://coachfinders.replit.app"]
     },
     "extra": {
       "eas": {
