@@ -17,9 +17,12 @@
     "preview": {
       "distribution": "internal",
       "withoutCredentials": true,
+      "env": {
+        "GRADLE_OPTS": "-Xmx4096m -XX:MaxMetaspaceSize=512m"
+      },
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug",
+        "gradleCommand": ":app:assembleDebug -PreactNativeArchitectures=arm64-v8a",
         "artifactPath": "android/app/build/outputs/apk/**/*.apk"
       },
       "ios": {
