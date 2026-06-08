@@ -16,6 +16,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "withoutCredentials": true,
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
