@@ -23,7 +23,7 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug -PreactNativeArchitectures=arm64-v8a",
-        "artifactPath": "android/app/build/outputs/apk/**/*.apk"
+        "applicationArchivePath": "android/app/build/outputs/apk/**/*.apk"
       },
       "ios": {
         "distribution": "internal"
