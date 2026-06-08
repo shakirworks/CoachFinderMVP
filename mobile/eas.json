@@ -19,7 +19,8 @@
       "withoutCredentials": true,
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "gradleCommand": ":app:assembleDebug",
+        "artifactPath": "android/app/build/outputs/apk/**/*.apk"
       },
       "ios": {
         "distribution": "internal"
