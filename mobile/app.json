@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#28714F"
+      "backgroundColor": "#6B1A2B"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#6B1A2B"
       },
       "package": "ca.coachfinders.app"
     },
@@ -46,6 +46,9 @@
       "eas": {
         "projectId": "f3288e04-eada-4bd1-b149-75185ce9a767"
       }
+    },
+    "deepLinking": {
+      "prefixes": ["coachfinders://", "https://coachfinders.replit.app"]
     }
   }
 }
